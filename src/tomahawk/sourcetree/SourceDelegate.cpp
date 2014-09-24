@@ -387,24 +387,31 @@ SourceDelegate::paintCategory( QPainter* painter, const QStyleOptionViewItem& op
 
     QFont font = painter->font();
     font.setPointSize( TomahawkUtils::defaultFontSize() - 1 );
-    painter->setFont( font );
 
-    painter->setPen( Qt::black );
-    painter->setOpacity( 0.5 );
-    painter->drawText( option.rect.translated( m_margin / 2, 0 ), index.data().toString().toUpper(), QTextOption( Qt::AlignVCenter ) );
+    int close_margin = 0;
+    QRect rect( option.rect.adjusted( m_margin / 2, 0, -m_margin / 2, 0 ) );
 
     if ( option.state & QStyle::State_MouseOver )
     {
+        painter->setFont( option.font );
+
         QString text = tr( "Show" );
         if ( option.state & QStyle::State_Open )
             text = tr( "Hide" );
 
-        painter->setFont( option.font );
+        close_margin = QFontMetrics( option.font ).width(text) + m_margin / 4;
 
         // draw close icon
         painter->setPen( TomahawkStyle::GROUP_HEADER );
-        painter->drawText( option.rect.translated( -m_margin / 8, 0 ), text, QTextOption( Qt::AlignVCenter | Qt::AlignRight ) );
+        painter->drawText( rect, text, QTextOption( Qt::AlignVCenter | Qt::AlignRight ) );
     }
+
+    painter->setFont( font );
+    painter->setPen( Qt::black );
+    painter->setOpacity( 0.5 );
+    QTextOption text_opt( Qt::AlignVCenter );
+    text_opt.setWrapMode( QTextOption::NoWrap );
+    painter->drawText( rect.adjusted(0, 0, -close_margin, 0), index.data().toString().toUpper(), text_opt );
 
     painter->restore();
 }
@@ -417,24 +424,35 @@ SourceDelegate::paintGroup( QPainter* painter, const QStyleOptionViewItem& optio
 
     QFont font = painter->font();
     font.setPointSize( TomahawkUtils::defaultFontSize() - 1 );
-    painter->setFont( font );
 
-    painter->setPen( Qt::black );
-    painter->setOpacity( 0.5 );
-    painter->drawText( option.rect.adjusted( m_margin, 0, -m_margin, -m_margin / 4 ), index.data().toString().toUpper(), QTextOption( Qt::AlignBottom ) );
+    int close_margin = m_margin;
 
     if ( option.state & QStyle::State_MouseOver )
     {
+        // compute close text bounding rect according to the main label
+        int height = painter->fontMetrics().height();
+        QRect rect(option.rect.adjusted( m_margin, 0, -m_margin / 8, -m_margin / 4 ));
+        rect.setTop(rect.top() + (rect.height() - height));
+
         QString text = tr( "Show" );
         if ( option.state & QStyle::State_Open )
             text = tr( "Hide" );
 
         painter->setFont( option.font );
+        close_margin = QFontMetrics( option.font ).width(text) + m_margin / 4;
 
         // draw close icon
         painter->setPen( TomahawkStyle::GROUP_HEADER );
-        painter->drawText( option.rect.translated( -m_margin / 8, -m_margin / 8 ), text, QTextOption( Qt::AlignBottom | Qt::AlignRight ) );
+        painter->drawText( rect, text, QTextOption( Qt::AlignVCenter | Qt::AlignRight ) );
     }
+
+    painter->setFont( font );
+    painter->setPen( Qt::black );
+    painter->setOpacity( 0.5 );
+
+    QTextOption text_opt( Qt::AlignBottom );
+    text_opt.setWrapMode( QTextOption::NoWrap );
+    painter->drawText( option.rect.adjusted( m_margin, 0, -close_margin, -m_margin / 4 ), index.data().toString().toUpper(), text_opt );
 
     painter->restore();
 }
