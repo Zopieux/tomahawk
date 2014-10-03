@@ -74,10 +74,9 @@ ActionCollection::initActions()
     m_actionCollection[ "realtimeFollowingAlong" ] = realtimeFollowingAlong;
 
     bool isPublic = TomahawkSettings::instance()->privateListeningMode() == TomahawkSettings::PublicListening;
-    QAction *privacyToggle = new QAction( ( isPublic ? tr( "&Listen Privately" ) : tr( "&Listen Publicly" ) ), this );
-    privacyToggle->setIcon( ImageRegistry::instance()->icon( RESPATH "images/private-listening.svg" ) );
-    privacyToggle->setIconVisibleInMenu( isPublic );
-    m_actionCollection[ "togglePrivacy" ] = privacyToggle;
+    m_actionCollection[ "togglePrivacy" ] = new QAction( tr( "&Listen Privately" ) , this );
+    m_actionCollection[ "togglePrivacy" ]->setCheckable( true );
+    m_actionCollection[ "togglePrivacy" ]->setChecked( !isPublic );
     connect( m_actionCollection[ "togglePrivacy" ], SIGNAL( triggered() ), SLOT( togglePrivateListeningMode() ), Qt::UniqueConnection );
 
     m_actionCollection[ "loadPlaylist" ] =   new QAction( tr( "&Load Playlist" ), this );
@@ -186,7 +185,7 @@ ActionCollection::createMenuBar( QWidget *parent )
     helpMenu->addAction( m_actionCollection["reportBug"] );
     helpMenu->addAction( m_actionCollection["helpTranslate"] );
     helpMenu->addSeparator();
-    QMenu* whatsNew = helpMenu->addMenu( ImageRegistry::instance()->icon( RESPATH "images/whatsnew.svg" ), tr( "What's new in ..." ) );
+    QMenu* whatsNew = helpMenu->addMenu( ImageRegistry::instance()->icon( RESPATH "images/whatsnew.svg" ), tr( "What's New in ..." ) );
     whatsNew->setFont( TomahawkUtils::systemFont() );
     whatsNew->addAction( m_actionCollection[ "whatsnew_0_8" ] );
     helpMenu->addAction( m_actionCollection[ "aboutTomahawk" ] );
@@ -256,7 +255,7 @@ ActionCollection::createCompactMenu( QWidget *parent )
     compactMenu->addAction( m_actionCollection[ "diagnostics" ] );
     compactMenu->addAction( m_actionCollection[ "openLogfile" ] );
     compactMenu->addAction( m_actionCollection[ "legalInfo" ] );
-    QMenu* whatsNew = compactMenu->addMenu( ImageRegistry::instance()->icon( RESPATH "images/whatsnew.svg" ), tr( "What's new in ..." ) );
+    QMenu* whatsNew = compactMenu->addMenu( ImageRegistry::instance()->icon( RESPATH "images/whatsnew.svg" ), tr( "What's New in ..." ) );
     whatsNew->addAction( m_actionCollection[ "whatsnew_0_8" ] );
     compactMenu->addAction( m_actionCollection[ "aboutTomahawk" ] );
 
@@ -347,10 +346,8 @@ ActionCollection::togglePrivateListeningMode()
     else
         TomahawkSettings::instance()->setPrivateListeningMode( TomahawkSettings::PublicListening );
 
-    QAction *privacyToggle = m_actionCollection[ "togglePrivacy" ];
     bool isPublic = TomahawkSettings::instance()->privateListeningMode() == TomahawkSettings::PublicListening;
-    privacyToggle->setText( ( isPublic ? tr( "&Listen Privately" ) : tr( "&Listen Publicly" ) ) );
-    privacyToggle->setIconVisibleInMenu( isPublic );
+    m_actionCollection[ "togglePrivacy" ]->setChecked( !isPublic );
 
     emit privacyModeChanged();
 }

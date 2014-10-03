@@ -85,9 +85,9 @@ private slots:
     void chartTracksLoaded( Tomahawk::ChartDataLoader*, const QList< Tomahawk::query_ptr >& );
 
 private:
-    void setLeftViewArtists( TreeModel* artistModel );
+    void setLeftViewArtists( PlayableModel* artistModel );
     void setLeftViewAlbums( PlayableModel* albumModel );
-    void setLeftViewTracks( PlaylistModel* trackModel );
+    void setLeftViewTracks( PlayableModel* trackModel );
     void setViewData( const QVariantMap& data );
 
     QStandardItem* parseNode( QStandardItem* parentItem, const QString& label, const QVariant& data );
@@ -106,8 +106,8 @@ private:
 
     // Cache our model data
     QHash< QString, PlayableModel* > m_albumModels;
-    QHash< QString, TreeModel* > m_artistModels;
-    QHash< QString, PlaylistModel* > m_trackModels;
+    QHash< QString, PlayableModel* > m_artistModels;
+    QHash< QString, PlayableModel* > m_trackModels;
     QString m_queueItemToShow;
     QSet< QString > m_queuedFetches;
     QMap<QString, QVariant> m_currentVIds;

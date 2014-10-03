@@ -65,6 +65,10 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
     m_columnView->setColumnHidden( PlayableModel::Filesize, true ); // Hide filesize column per default
     m_columnView->setColumnHidden( PlayableModel::Composer, true ); // Hide composer column per default*/
 
+    m_trackView->setColumnHidden( PlayableModel::Origin, true );
+    m_trackView->setColumnHidden( PlayableModel::Score, true );
+    m_trackView->setGuid( QString( "trackview/flat" ) );
+
     {
         m_albumView->setAutoResize( false );
         m_albumView->setAutoFitItems( true );
@@ -123,13 +127,6 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
 FlexibleTreeView::~FlexibleTreeView()
 {
     tDebug() << Q_FUNC_INFO;
-}
-
-
-void
-FlexibleTreeView::setGuid( const QString& guid )
-{
-    m_columnView->setGuid( guid );
 }
 
 

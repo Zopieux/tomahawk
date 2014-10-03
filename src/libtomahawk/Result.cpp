@@ -55,11 +55,10 @@ sourceCacheKey( Resolver* resolver, const QSize& size, TomahawkUtils::ImageMode 
 
 
 Tomahawk::result_ptr
-Result::get( const QString& url )
+Result::get( const QString& url, const track_ptr& track )
 {
-    if ( url.trimmed().isEmpty() )
+    if ( url.trimmed().isEmpty() || track.isNull() )
     {
-//        Q_ASSERT( false );
         return result_ptr();
     }
 
@@ -69,22 +68,32 @@ Result::get( const QString& url )
         return s_results.value( url );
     }
 
-    result_ptr r = result_ptr( new Result( url ), &Result::deleteLater );
+    result_ptr r = result_ptr( new Result( url, track ), &Result::deleteLater );
     s_results.insert( url, r );
 
     return r;
 }
 
 
-bool
-Result::isCached( const QString& url )
+result_ptr
+Result::getCached( const QString& url )
 {
+    if ( url.trimmed().isEmpty() )
+    {
+        return result_ptr();
+    }
+
     QMutexLocker lock( &s_mutex );
-    return ( s_results.contains( url ) );
+    if ( s_results.contains( url ) )
+    {
+        return s_results.value( url );
+    }
+
+    return result_ptr();
 }
 
 
-Result::Result( const QString& url )
+Result::Result( const QString& url, const track_ptr& track )
     : QObject()
     , m_url( url )
     , m_checked( false )
@@ -93,6 +102,7 @@ Result::Result( const QString& url )
     , m_modtime( 0 )
     , m_score( 0 )
     , m_fileId( 0 )
+    , m_track( track )
 {
     connect( Pipeline::instance(), SIGNAL( resolverRemoved( Tomahawk::Resolver* ) ), SLOT( onResolverRemoved( Tomahawk::Resolver* ) ), Qt::QueuedConnection );
 }
@@ -115,13 +125,6 @@ Result::deleteLater()
     }
 
     QObject::deleteLater();
-}
-
-
-bool
-Result::isValid() const
-{
-    return m_track && !m_track->artist().isEmpty() && !m_track->track().isEmpty();
 }
 
 
@@ -233,13 +236,23 @@ Result::toVariant() const
 QString
 Result::toString() const
 {
-    return QString( "Result(%1, score: %2) %3 - %4%5 (%6)" )
-              .arg( id() )
-              .arg( score() )
-              .arg( track()->artist() )
-              .arg( track()->track() )
-              .arg( track()->album().isEmpty() ? "" : QString( " on %1" ).arg( track()->album() ) )
-              .arg( url() );
+    if ( m_track )
+    {
+        return QString( "Result(%1, score: %2) %3 - %4%5 (%6)" )
+                  .arg( id() )
+                  .arg( m_score )
+                  .arg( m_track->artist() )
+                  .arg( m_track->track() )
+                  .arg( m_track->album().isEmpty() ? QString() : QString( " on %1" ).arg( m_track->album() ) )
+                  .arg( m_url );
+    }
+    else
+    {
+        return QString( "Result(%1, score: %2) (%3)" )
+                  .arg( id() )
+                  .arg( m_score )
+                  .arg( m_url );
+    }
 }
 
 
@@ -255,7 +268,7 @@ Result::toQuery()
         m_query = query->weakRef();
 
         QList<Tomahawk::result_ptr> rl;
-        rl << Result::get( m_url );
+        rl << Result::get( m_url, m_track );
 
         query->addResults( rl );
         query->setResolveFinished( true );

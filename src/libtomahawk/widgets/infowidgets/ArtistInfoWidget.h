@@ -92,11 +92,11 @@ signals:
     void pixmapChanged( const QPixmap& pixmap );
 
 protected:
+    void resizeEvent( QResizeEvent* event );
     void changeEvent( QEvent* e );
     bool eventFilter( QObject* obj, QEvent* event );
 
 private slots:
-    void onArtistStatsLoaded();
     void onArtistImageUpdated();
     void onBiographyLoaded();
 

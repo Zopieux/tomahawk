@@ -1000,10 +1000,15 @@ TomahawkWindow::onHistoryForwardAvailable( bool avail )
 void
 TomahawkWindow::showSettingsDialog()
 {
-    SettingsDialog* settingsDialog = new SettingsDialog;
-    connect( settingsDialog, SIGNAL( finished( bool ) ), settingsDialog, SLOT( deleteLater() ) );
+    if ( m_settingsDialog )
+        return;
 
-    settingsDialog->show();
+    m_settingsDialog = new SettingsDialog;
+    // This needs to be a QueuedConnection, so that deleteLater() actually works.
+    connect( m_settingsDialog.data(), SIGNAL( finished( bool ) ),
+             m_settingsDialog.data(), SLOT( deleteLater() ), Qt::QueuedConnection );
+
+    m_settingsDialog->show();
 }
 
 
@@ -1021,11 +1026,13 @@ TomahawkWindow::legalInfo()
     QDesktopServices::openUrl( QUrl( "http://www.tomahawk-player.org/legal.html" ) );
 }
 
+
 void
 TomahawkWindow::getSupport()
 {
     QDesktopServices::openUrl( QUrl( "https://tomahawk.uservoice.com" ) );
 }
+
 
 void
 TomahawkWindow::reportBug()
@@ -1033,11 +1040,13 @@ TomahawkWindow::reportBug()
     QDesktopServices::openUrl( QUrl( "https://bugs.tomahawk-player.org" ) );
 }
 
+
 void
 TomahawkWindow::helpTranslate()
 {
     QDesktopServices::openUrl( QUrl( "https://www.transifex.com/projects/p/tomahawk/" ) );
 }
+
 
 void
 TomahawkWindow::openLogfile()

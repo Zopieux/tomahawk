@@ -106,6 +106,8 @@ ContextView::ContextView( QWidget* parent, const QString& caption )
     connect( m_trackView, SIGNAL( querySelected( Tomahawk::query_ptr ) ), SLOT( onQuerySelected( Tomahawk::query_ptr ) ) );
     connect( m_trackView, SIGNAL( querySelected( Tomahawk::query_ptr ) ), detailView, SLOT( setQuery( Tomahawk::query_ptr ) ) );
 //    connect( m_header, SIGNAL( filterTextChanged( QString ) ), SLOT( setFilter( QString ) ) );
+
+    TomahawkUtils::fixMargins( this );
 }
 
 
@@ -150,11 +152,12 @@ ContextView::onCoverUpdated()
     if ( !m_query || m_query->track()->cover( QSize( 0, 0 ) ).isNull() )
     {
         m_pixmap = QPixmap();
-        emit pixmapChanged( m_pixmap );
-        return;
+    }
+    else
+    {
+        m_pixmap = m_query->track()->cover( QSize( 0, 0 ) );
     }
 
-    m_pixmap = m_query->track()->cover( QSize( 0, 0 ) );
     emit pixmapChanged( m_pixmap );
 }
 

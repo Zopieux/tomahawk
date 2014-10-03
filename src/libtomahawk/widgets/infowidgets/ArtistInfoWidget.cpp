@@ -60,18 +60,12 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
     m_headerWidget = new BasicHeader;
     ui->setupUi( m_widget );
 
-    artist->loadStats();
-    connect( artist.data(), SIGNAL( statsLoaded() ), SLOT( onArtistStatsLoaded() ) );
-
-    m_pixmap = TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultArtistImage, TomahawkUtils::Original, scaled( QSize( 48, 48 ) ) );
-    ui->cover->setPixmap( TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultArtistImage, TomahawkUtils::Grid, ui->cover->size() ) );
-
     {
         ui->relatedArtists->setAutoResize( true );
         ui->relatedArtists->setAutoFitItems( true );
         ui->relatedArtists->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->relatedArtists->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-        ui->relatedArtists->setItemSize( scaled( QSize( 170, 170 + 34 ) ) );
+        ui->relatedArtists->setItemSize( scaled( QSize( 170, 170 + 38 ) ) );
 
         m_relatedModel = new PlayableModel( ui->relatedArtists );
         ui->relatedArtists->setPlayableModel( m_relatedModel );
@@ -91,14 +85,13 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         ui->albums->setWrapping( false );
         ui->albums->setItemSize( scaled( QSize( 190, 190 + 56 ) ) );
         ui->albums->proxyModel()->setHideDupeItems( true );
-        ui->albums->setFixedHeight( scaledY( 190 + 56 + 34 ) );
+        ui->albums->setFixedHeight( scaledY( 190 + 56 + 38 ) );
 
         m_albumsModel = new PlayableModel( ui->albums );
         ui->albums->setPlayableModel( m_albumsModel );
         ui->albums->proxyModel()->sort( -1 );
         ui->albums->setEmptyTip( tr( "Sorry, we could not find any albums for this artist!" ) );
 
-        ui->albums->setStyleSheet( QString( "QListView { background-color: white; }" ) );
         TomahawkStyle::stylePageFrame( ui->albumFrame );
         TomahawkStyle::styleScrollBar( ui->albums->verticalScrollBar() );
         TomahawkStyle::styleScrollBar( ui->albums->horizontalScrollBar() );
@@ -112,14 +105,13 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         ui->topHits->setWrapping( false );
         ui->topHits->setItemSize( scaled( QSize( 140, 140 + 56 ) ) );
         ui->topHits->proxyModel()->setHideDupeItems( true );
-        ui->topHits->setFixedHeight( scaledY( 140 + 56 + 34 ) );
+        ui->topHits->setFixedHeight( scaledY( 140 + 56 + 38 ) );
 
         m_topHitsModel = new PlayableModel( ui->topHits );
         ui->topHits->setPlayableModel( m_topHitsModel );
         ui->topHits->proxyModel()->sort( -1 );
         ui->topHits->setEmptyTip( tr( "Sorry, we could not find any top hits for this artist!" ) );
 
-        ui->topHits->setStyleSheet( QString( "QListView { background-color: white; }" ) );
         TomahawkStyle::stylePageFrame( ui->trackFrame );
     }
 
@@ -144,6 +136,8 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
 
         connect( ui->albumsMoreLabel, SIGNAL( clicked() ), SLOT( onAlbumsMoreClicked() ) );
         connect( ui->topHitsMoreLabel, SIGNAL( clicked() ), SLOT( onTopHitsMoreClicked() ) );
+
+        ui->cover->setFixedSize( scaled( QSize( 384, 384 ) ) );
     }
 
     {
@@ -212,7 +206,7 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
 
         QVBoxLayout* vboxl = new QVBoxLayout;
         TomahawkUtils::unmarginLayout( vboxl );
-        vboxl->setContentsMargins( scaled( 32, 32, 32, 32 ) );
+        vboxl->setContentsMargins( 32, 32, 32, 32 );
         vboxl->setSpacing( scaledY( 8 ) );
         vbox->setLayout( vboxl );
 
@@ -241,6 +235,10 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
     m_plInterface = playlistinterface_ptr( mpl );
 
     onSliderValueChanged( 0 );
+
+    TomahawkUtils::fixMargins( this );
+
+    m_pixmap = TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultArtistImage, TomahawkUtils::Original, scaled( QSize( 48, 48 ) ) );
     load( artist );
 }
 
@@ -346,7 +344,6 @@ ArtistInfoWidget::onAlbumsFound( const QList<Tomahawk::album_ptr>& albums, Model
 {
     Q_UNUSED( mode );
 
-//    m_albumsModel->clear();
     m_albumsModel->appendAlbums( albums );
 }
 
@@ -375,6 +372,7 @@ ArtistInfoWidget::onBiographyLoaded()
     m_longDescription = m_artist->biography();
     emit longDescriptionChanged( m_longDescription );
 
+    onArtistImageUpdated();
     ui->biography->setFixedHeight( ui->cover->width() );
 
     QString html =
@@ -392,27 +390,22 @@ ArtistInfoWidget::onBiographyLoaded()
 
 
 void
-ArtistInfoWidget::onArtistStatsLoaded()
-{
-/*    m_playStatsGauge->setValue( m_artist->playbackCount( SourceList::instance()->getLocal() ) );
-    m_playStatsGauge->setMaximum( SourceList::instance()->getLocal()->playbackCount() ); */
-
-/*    m_playStatsGauge->setMaximum( m_artist->chartCount() );
-    m_playStatsGauge->setValue( m_artist->chartPosition() );*/
-}
-
-
-void
 ArtistInfoWidget::onArtistImageUpdated()
 {
-    if ( m_artist->cover( QSize( 0, 0 ) ).isNull() )
-        return;
+    const QSize coverSize = QSize( ui->cover->width(), ui->cover->width() );
+    if ( !m_artist || m_artist->cover( QSize( 0, 0 ) ).isNull() )
+    {
+        ui->cover->setPixmap( TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultArtistImage, TomahawkUtils::Grid, coverSize ) );
+    }
+    else
+    {
+        ui->cover->setPixmap( m_artist->cover( coverSize ) );
+    }
 
     m_pixmap = m_artist->cover( QSize( 0, 0 ) );
     emit pixmapChanged( m_pixmap );
 
     m_headerWidget->setBackground( m_pixmap, true, false );
-    ui->cover->setPixmap( m_artist->cover( QSize( ui->cover->width(), ui->cover->width() ) ) );
 }
 
 
@@ -571,4 +564,11 @@ ArtistInfoWidget::eventFilter( QObject* obj, QEvent* event )
     }
     else
         return QObject::eventFilter( obj, event );
+}
+
+
+void
+ArtistInfoWidget::resizeEvent( QResizeEvent* event )
+{
+    QWidget::resizeEvent( event );
 }

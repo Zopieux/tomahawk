@@ -57,6 +57,7 @@
 
 #include <QApplication>
 #include <QClipboard>
+#include <QMessageBox>
 
 #include <echonest/Playlist.h>
 
@@ -189,6 +190,22 @@ GlobalActionManager::installResolverFromFile( const QString& resolverPath )
         tDebug() << "Resolver was not installed:" << resolverPath;
         return;
     }
+
+    int result = QMessageBox::question( JobStatusView::instance(),
+                                        tr( "Install plug-in" ),
+                                        tr( "<b>%1</b> %2<br/>"
+                                            "by <b>%3</b><br/><br/>"
+                                            "You are attempting to install a Tomahawk "
+                                            "plug-in from an unknown source. Plug-ins from "
+                                            "untrusted sources may put your data at risk.<br/>"
+                                            "Do you want to install this plug-in?" )
+                                        .arg( acct->accountFriendlyName() )
+                                        .arg( acct->version() )
+                                        .arg( acct->author() ),
+                                        QMessageBox::Yes,
+                                        QMessageBox::No );
+    if ( result != QMessageBox::Yes )
+        return;
 
     Accounts::AccountManager::instance()->addAccount( acct );
     TomahawkSettings::instance()->addAccount( acct->accountId() );
@@ -350,7 +367,7 @@ GlobalActionManager::parseTomahawkLink( const QString& urlIn )
             if ( urlHasQueryItem( u, "xspf" ) )
             {
                 QUrl xspf = QUrl::fromUserInput( urlQueryItemValue( u, "xspf" ) );
-                XSPFLoader* l = new XSPFLoader( true, this );
+                XSPFLoader* l = new XSPFLoader( true, true, this );
                 tDebug() << "Loading spiff:" << xspf.toString();
                 l->load( xspf );
                 connect( l, SIGNAL( ok( Tomahawk::playlist_ptr ) ), ViewManager::instance(), SLOT( show( Tomahawk::playlist_ptr ) ) );
@@ -516,7 +533,7 @@ GlobalActionManager::createPlaylistFromUrl( const QString& type, const QString &
     if ( type == "xspf" )
     {
         QUrl xspf = QUrl::fromUserInput( url );
-        XSPFLoader* l= new XSPFLoader( true, this );
+        XSPFLoader* l= new XSPFLoader( true, true, this );
         l->setOverrideTitle( title );
         l->load( xspf );
         connect( l, SIGNAL( ok( Tomahawk::playlist_ptr ) ), this, SLOT( playlistCreatedToShow( Tomahawk::playlist_ptr) ) );
@@ -1252,7 +1269,7 @@ GlobalActionManager::playSpotify( const QUrl& url )
         return false;
 
     QString spotifyUrl = urlHasQueryItem( url, "spotifyURI" ) ? urlQueryItemValue( url, "spotifyURI" ) : urlQueryItemValue( url, "spotifyURL" );
-    SpotifyParser* p = new SpotifyParser( spotifyUrl, this );
+    SpotifyParser* p = new SpotifyParser( spotifyUrl, false, this );
     connect( p, SIGNAL( track( Tomahawk::query_ptr ) ), this, SLOT( playOrQueueNow( Tomahawk::query_ptr ) ) );
 
     return true;
@@ -1328,7 +1345,7 @@ GlobalActionManager::waitingForResolved( bool /* success */ )
 bool
 GlobalActionManager::openSpotifyLink( const QString& link )
 {
-    SpotifyParser* spot = new SpotifyParser( link, this );
+    SpotifyParser* spot = new SpotifyParser( link, false, this );
     connect( spot, SIGNAL( track( Tomahawk::query_ptr ) ), this, SLOT( handleOpenTrack( Tomahawk::query_ptr ) ) );
 
     return true;
