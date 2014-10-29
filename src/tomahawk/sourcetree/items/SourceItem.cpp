@@ -74,16 +74,18 @@ SourceItem::SourceItem( SourcesModel* mdl, SourceTreeItem* parent, const Tomahaw
     }
 
 /*    m_sourceInfoItem = new GenericPageItem( model(), this, tr( "New Additions" ), QIcon( RESPATH "images/new-additions.png" ),
-                                            boost::bind( &SourceItem::sourceInfoClicked, this ),
-                                            boost::bind( &SourceItem::getSourceInfoPage, this ) );*/
+                                            bind( &SourceItem::sourceInfoClicked, this ),
+                                            bind( &SourceItem::getSourceInfoPage, this ) );*/
 
-    m_latestAdditionsItem = new GenericPageItem( model(), this, tr( "Latest Additions" ), ImageRegistry::instance()->icon( RESPATH "images/new-additions.svg" ),
-                                                 boost::bind( &SourceItem::latestAdditionsClicked, this ),
-                                                 boost::bind( &SourceItem::getLatestAdditionsPage, this ) );
+    m_latestAdditionsItem = new GenericPageItem( model(), this, tr( "Latest Additions" ),
+                                                 ImageRegistry::instance()->icon( RESPATH "images/new-additions.svg" ),
+                                                 std::bind( &SourceItem::latestAdditionsClicked, this ),
+                                                 std::bind( &SourceItem::getLatestAdditionsPage, this ) );
 
-    m_recentPlaysItem = new GenericPageItem( model(), this, tr( "History" ), ImageRegistry::instance()->icon( RESPATH "images/recently-played.svg" ),
-                                             boost::bind( &SourceItem::recentPlaysClicked, this ),
-                                             boost::bind( &SourceItem::getRecentPlaysPage, this ) );
+    m_recentPlaysItem = new GenericPageItem( model(), this, tr( "History" ),
+                                             ImageRegistry::instance()->icon( RESPATH "images/recently-played.svg" ),
+                                             std::bind( &SourceItem::recentPlaysClicked, this ),
+                                             std::bind( &SourceItem::getRecentPlaysPage, this ) );
 
     new LovedTracksItem( model(), this );
 
@@ -377,8 +379,8 @@ SourceItem::performAddCollectionItem( const collection_ptr& collection )
                                                      this,
                                                      collection->itemName(),
                                                      collection->icon(),
-                                                     boost::bind( &SourceItem::collectionClicked, this, collection ),
-                                                     boost::bind( &SourceItem::getCollectionPage, this, collection ) );
+                                                     std::bind( &SourceItem::collectionClicked, this, collection ),
+                                                     std::bind( &SourceItem::getCollectionPage, this, collection ) );
         i->setSortValue( -340 );
         item = i;
     }

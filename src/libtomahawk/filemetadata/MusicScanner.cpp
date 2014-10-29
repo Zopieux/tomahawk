@@ -33,7 +33,7 @@
 #include "SourceList.h"
 #include "TomahawkSettings.h"
 
-#include <QCoreApplication>
+#include "config.h"
 
 using namespace Tomahawk;
 
@@ -137,7 +137,6 @@ MusicScanner::MusicScanner( MusicScanner::ScanMode scanMode, const QStringList& 
     , m_scanMode( scanMode )
     , m_paths( paths )
     , m_scanned( 0 )
-    , m_showProgress( true )
     , m_dryRun( false )
     , m_verbose( false )
     , m_cmdQueue( 0 )
@@ -159,20 +158,6 @@ MusicScanner::~MusicScanner()
         delete m_dirListerThreadController;
         m_dirListerThreadController = 0;
     }
-}
-
-
-void
-MusicScanner::showProgress( bool _showProgress )
-{
-    m_showProgress = _showProgress;
-}
-
-
-bool
-MusicScanner::showingProgress()
-{
-    return m_showProgress;
 }
 
 
@@ -211,10 +196,7 @@ MusicScanner::startScan()
     m_scanned = m_skipped = m_cmdQueue = 0;
     m_skippedFiles.clear();
 
-    if ( m_showProgress )
-    {
-        SourceList::instance()->getLocal()->scanningProgress( m_scanned );
-    }
+    emit progress( m_scanned );
 
     // trigger the scan once we've loaded old filemtimes
     //FIXME: For multiple collection support make sure the right prefix gets passed in...or not...
@@ -405,7 +387,7 @@ MusicScanner::readTags( const QFileInfo& fi )
         return QVariantMap(); // invalid extension
 
     #ifdef COMPLEX_TAGLIB_FILENAME
-        const wchar_t *encodedName = reinterpret_cast< const wchar_t * >( fi.canonicalFilePath().utf16() );
+        const wchar_t *encodedName = fi.canonicalFilePath().toStdWString().c_str();
     #else
         QByteArray fileName = QFile::encodeName( fi.canonicalFilePath() );
         const char *encodedName = fileName.constData();
@@ -465,8 +447,9 @@ MusicScanner::readFile( const QFileInfo& fi )
     const QVariant m = readTags( fi );
 
     if ( m_scanned )
-        if ( m_scanned % 3 == 0 && m_showProgress )
-            SourceList::instance()->getLocal()->scanningProgress( m_scanned );
+        if ( m_scanned % 3 == 0 )
+            emit progress( m_scanned );
+
     if ( m_scanned % 100 == 0 || m_verbose )
       tDebug( LOGINFO ) << "Scanning file:" << m_scanned << fi.canonicalFilePath();
 

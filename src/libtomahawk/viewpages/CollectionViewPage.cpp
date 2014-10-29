@@ -17,7 +17,7 @@
  *   along with Tomahawk. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "FlexibleTreeView.h"
+#include "CollectionViewPage.h"
 
 #include <QRadioButton>
 #include <QStackedWidget>
@@ -29,7 +29,8 @@
 #include "playlist/ColumnView.h"
 #include "playlist/TrackView.h"
 #include "playlist/GridView.h"
-#include "PlayableProxyModelPlaylistInterface.h"
+#include "playlist/PlayableProxyModelPlaylistInterface.h"
+#include "resolvers/ScriptCollection.h"
 #include "TomahawkSettings.h"
 #include "utils/ImageRegistry.h"
 #include "utils/TomahawkStyle.h"
@@ -40,7 +41,7 @@
 using namespace Tomahawk;
 
 
-FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
+CollectionViewPage::CollectionViewPage( const Tomahawk::collection_ptr& collection, QWidget* parent )
     : QWidget( parent )
     , m_header( new FilterHeader( this ) )
     , m_columnView( new ColumnView() )
@@ -48,22 +49,16 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
     , m_albumView( new GridView() )
     , m_model( 0 )
     , m_flatModel( 0 )
-    , m_temporary( false )
+    , m_albumModel( 0 )
 {
-    qRegisterMetaType< FlexibleTreeViewMode >( "FlexibleTreeViewMode" );
+    qRegisterMetaType< CollectionViewPageMode >( "CollectionViewPageMode" );
 
-    m_header->setBackgroundColor( Qt::black );
-    m_header->setBackground( ImageRegistry::instance()->pixmap( RESPATH "images/collection_background_small.png", QSize( 0, 0 ) ), false );
+    m_header->setBackground( ImageRegistry::instance()->pixmap( RESPATH "images/collection_background.png", QSize( 0, 0 ) ), false );
     setPixmap( TomahawkUtils::defaultPixmap( TomahawkUtils::DefaultCollection, TomahawkUtils::Original, QSize( 256, 256 ) ) );
 
-//    m_trackView->setPlaylistInterface( m_playlistInterface );
-//    m_columnView->setPlaylistInterface( m_trackView->proxyModel()->playlistInterface() );
-//    m_gridView->setPlaylistInterface( m_trackView->proxyModel()->playlistInterface() );
+    m_columnView->proxyModel()->setStyle( PlayableProxyModel::Collection );
 
-/*    m_columnView->setColumnHidden( PlayableModel::Age, true ); // Hide age column per default
-    m_columnView->setColumnHidden( PlayableModel::Filesize, true ); // Hide filesize column per default
-    m_columnView->setColumnHidden( PlayableModel::Composer, true ); // Hide composer column per default*/
-
+    m_trackView->setColumnHidden( PlayableModel::Composer, true );
     m_trackView->setColumnHidden( PlayableModel::Origin, true );
     m_trackView->setColumnHidden( PlayableModel::Score, true );
     m_trackView->setGuid( QString( "trackview/flat" ) );
@@ -71,7 +66,6 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
     {
         m_albumView->setAutoResize( false );
         m_albumView->setAutoFitItems( true );
-//        m_albumView->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         m_albumView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         m_albumView->setItemSize( QSize( 170, 170 + 56 ) );
 
@@ -105,14 +99,12 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
         m_header->ui->anchor2Label->setFixedWidth( fm.width( m_header->ui->anchor2Label->text() ) + 16 );
         m_header->ui->anchor3Label->setFixedWidth( fm.width( m_header->ui->anchor3Label->text() ) + 16 );
 
-        NewClosure( m_header->ui->anchor1Label, SIGNAL( clicked() ), const_cast< FlexibleTreeView* >( this ), SLOT( setCurrentMode( FlexibleTreeViewMode ) ), FlexibleTreeView::Columns )->setAutoDelete( false );
-        NewClosure( m_header->ui->anchor2Label, SIGNAL( clicked() ), const_cast< FlexibleTreeView* >( this ), SLOT( setCurrentMode( FlexibleTreeViewMode ) ), FlexibleTreeView::Albums )->setAutoDelete( false );
-        NewClosure( m_header->ui->anchor3Label, SIGNAL( clicked() ), const_cast< FlexibleTreeView* >( this ), SLOT( setCurrentMode( FlexibleTreeViewMode ) ), FlexibleTreeView::Flat )->setAutoDelete( false );
+        NewClosure( m_header->ui->anchor1Label, SIGNAL( clicked() ), const_cast< CollectionViewPage* >( this ), SLOT( setCurrentMode( CollectionViewPageMode ) ), CollectionViewPage::Columns )->setAutoDelete( false );
+        NewClosure( m_header->ui->anchor2Label, SIGNAL( clicked() ), const_cast< CollectionViewPage* >( this ), SLOT( setCurrentMode( CollectionViewPageMode ) ), CollectionViewPage::Albums )->setAutoDelete( false );
+        NewClosure( m_header->ui->anchor3Label, SIGNAL( clicked() ), const_cast< CollectionViewPage* >( this ), SLOT( setCurrentMode( CollectionViewPageMode ) ), CollectionViewPage::Flat )->setAutoDelete( false );
     }
 
     layout()->addWidget( m_header );
-    if ( extraHeader )
-        layout()->addWidget( extraHeader );
     layout()->addWidget( m_stack );
 
     m_stack->addWidget( m_columnView );
@@ -120,108 +112,89 @@ FlexibleTreeView::FlexibleTreeView( QWidget* parent, QWidget* extraHeader )
     m_stack->addWidget( m_trackView );
 
     connect( m_header, SIGNAL( filterTextChanged( QString ) ), SLOT( setFilter( QString ) ) );
+
+    loadCollection( collection );
 }
 
 
-FlexibleTreeView::~FlexibleTreeView()
+CollectionViewPage::~CollectionViewPage()
 {
     tDebug() << Q_FUNC_INFO;
 }
 
 
 void
-FlexibleTreeView::setTrackView( TrackView* view )
+CollectionViewPage::loadCollection( const collection_ptr& collection )
 {
-    if ( m_trackView )
+    if ( m_collection )
     {
-        m_stack->removeWidget( m_trackView );
-        delete m_trackView;
+        disconnect( collection.data(), SIGNAL( changed() ), this, SLOT( onCollectionChanged() ) );
     }
 
-//    view->setPlaylistInterface( m_playlistInterface );
+    m_collection = collection;
+    connect( collection.data(), SIGNAL( changed() ), SLOT( onCollectionChanged() ), Qt::UniqueConnection );
 
-    m_trackView = view;
-    m_stack->addWidget( view );
+    onCollectionChanged();
 }
 
 
 void
-FlexibleTreeView::setColumnView( ColumnView* view )
+CollectionViewPage::setTreeModel( TreeModel* model )
 {
-    if ( m_columnView )
-    {
-        m_stack->removeWidget( m_columnView );
-        delete m_columnView;
-    }
-
-    connect( view, SIGNAL( destroyed( QWidget* ) ), SLOT( onWidgetDestroyed( QWidget* ) ), Qt::UniqueConnection );
-
-//    view->setPlaylistInterface( m_trackView->proxyModel()->playlistInterface() );
-
-    m_columnView = view;
-    m_stack->addWidget( view );
-}
-
-
-void
-FlexibleTreeView::setTreeModel( TreeModel* model )
-{
-    if ( m_model )
-    {
-        disconnect( m_model, SIGNAL( changed() ), this, SLOT( onModelChanged() ) );
-        delete m_model;
-    }
-
+    QPointer<PlayableModel> oldModel = m_model;
     m_model = model;
-
-//    m_trackView->setPlayableModel( model );
     m_columnView->setTreeModel( model );
-
-/*    m_trackView->setSortingEnabled( false );
-    m_trackView->sortByColumn( -1 );
-    m_trackView->proxyModel()->sort( -1 );
-    m_columnView->proxyModel()->sort( -1 );
-    m_gridView->proxyModel()->sort( -1 );*/
 
     connect( model, SIGNAL( changed() ), SLOT( onModelChanged() ), Qt::UniqueConnection );
     onModelChanged();
+
+    if ( oldModel )
+    {
+        disconnect( oldModel.data(), SIGNAL( changed() ), this, SLOT( onModelChanged() ) );
+        delete oldModel.data();
+    }
 }
 
 
 void
-FlexibleTreeView::setFlatModel( PlayableModel* model )
+CollectionViewPage::setFlatModel( PlayableModel* model )
 {
-    if ( m_flatModel )
-    {
-//        disconnect( m_flatModel, SIGNAL( changed() ), this, SLOT( onModelChanged() ) );
-        delete m_flatModel;
-    }
+    QPointer<PlayableModel> oldModel = m_flatModel;
 
     m_flatModel = model;
-
     m_trackView->setPlayableModel( model );
-
     m_trackView->setSortingEnabled( true );
     m_trackView->sortByColumn( 0, Qt::AscendingOrder );
 
-/*    connect( model, SIGNAL( changed() ), SLOT( onModelChanged() ), Qt::UniqueConnection );
-    onModelChanged();*/
+    if ( oldModel )
+    {
+        disconnect( oldModel.data(), SIGNAL( changed() ), this, SLOT( onModelChanged() ) );
+        delete oldModel.data();
+    }
 }
 
 
 void
-FlexibleTreeView::setAlbumModel( PlayableModel* model )
+CollectionViewPage::setAlbumModel( PlayableModel* model )
 {
+    QPointer<PlayableModel> oldModel = m_albumModel;
+
+    if ( m_albumModel )
+        delete m_albumModel;
+
     m_albumModel = model;
     m_albumView->setPlayableModel( model );
 
-    /*    connect( model, SIGNAL( changed() ), SLOT( onModelChanged() ), Qt::UniqueConnection );
-     *    onModelChanged();*/
+    if ( oldModel )
+    {
+        disconnect( oldModel.data(), SIGNAL( changed() ), this, SLOT( onModelChanged() ) );
+        delete oldModel.data();
+    }
 }
 
 
 void
-FlexibleTreeView::setCurrentMode( FlexibleTreeViewMode mode )
+CollectionViewPage::setCurrentMode( CollectionViewPageMode mode )
 {
     if ( m_mode != mode )
     {
@@ -289,35 +262,35 @@ FlexibleTreeView::setCurrentMode( FlexibleTreeViewMode mode )
 
 
 Tomahawk::playlistinterface_ptr
-FlexibleTreeView::playlistInterface() const
+CollectionViewPage::playlistInterface() const
 {
     return m_columnView->proxyModel()->playlistInterface();
 }
 
 
 QString
-FlexibleTreeView::title() const
+CollectionViewPage::title() const
 {
     return m_model->title();
 }
 
 
 QString
-FlexibleTreeView::description() const
+CollectionViewPage::description() const
 {
     return m_model->description();
 }
 
 
 QPixmap
-FlexibleTreeView::pixmap() const
+CollectionViewPage::pixmap() const
 {
     return m_pixmap;
 }
 
 
 bool
-FlexibleTreeView::jumpToCurrentTrack()
+CollectionViewPage::jumpToCurrentTrack()
 {
     tDebug() << Q_FUNC_INFO;
 
@@ -333,7 +306,7 @@ FlexibleTreeView::jumpToCurrentTrack()
 
 
 bool
-FlexibleTreeView::setFilter( const QString& pattern )
+CollectionViewPage::setFilter( const QString& pattern )
 {
     ViewPage::setFilter( pattern );
 
@@ -346,27 +319,29 @@ FlexibleTreeView::setFilter( const QString& pattern )
 
 
 void
-FlexibleTreeView::restoreViewMode()
+CollectionViewPage::restoreViewMode()
 {
+    //FIXME: needs be moved to TomahawkSettings
     TomahawkSettings::instance()->beginGroup( "ui" );
     int modeNumber = TomahawkSettings::instance()->value( "flexibleTreeViewMode", Columns ).toInt();
-    m_mode = static_cast< FlexibleTreeViewMode >( modeNumber );
+    m_mode = static_cast< CollectionViewPageMode >( modeNumber );
     TomahawkSettings::instance()->endGroup();
 
-    setCurrentMode( (FlexibleTreeViewMode)modeNumber );
+    setCurrentMode( (CollectionViewPageMode)modeNumber );
 }
 
 
 void
-FlexibleTreeView::setEmptyTip( const QString& tip )
+CollectionViewPage::setEmptyTip( const QString& tip )
 {
     m_columnView->setEmptyTip( tip );
+    m_albumView->setEmptyTip( tip );
     m_trackView->setEmptyTip( tip );
 }
 
 
 void
-FlexibleTreeView::setPixmap( const QPixmap& pixmap, bool tinted )
+CollectionViewPage::setPixmap( const QPixmap& pixmap, bool tinted )
 {
     m_pixmap = pixmap;
     m_header->setPixmap( pixmap, tinted );
@@ -374,40 +349,50 @@ FlexibleTreeView::setPixmap( const QPixmap& pixmap, bool tinted )
 
 
 void
-FlexibleTreeView::onModelChanged()
+CollectionViewPage::onModelChanged()
 {
     setPixmap( m_model->icon(), false );
     m_header->setCaption( m_model->title() );
     m_header->setDescription( m_model->description() );
-
-    setEmptyTip( tr( "This collection is currently empty." ) );
 }
 
 
 void
-FlexibleTreeView::onWidgetDestroyed( QWidget* widget )
+CollectionViewPage::onCollectionChanged()
 {
-    Q_UNUSED( widget );
-    emit destroyed( this );
+    TreeModel* model = new TreeModel();
+    PlayableModel* flatModel = new PlayableModel();
+    PlayableModel* albumModel = new PlayableModel();
+
+    setTreeModel( model );
+    setFlatModel( flatModel );
+    setAlbumModel( albumModel );
+
+    model->addCollection( m_collection );
+    flatModel->appendTracks( m_collection );
+    albumModel->appendAlbums( m_collection );
+
+    if ( m_collection && m_collection->source() && m_collection->source()->isLocal() )
+    {
+        setEmptyTip( tr( "After you have scanned your music collection you will find your tracks right here." ) );
+    }
+    else
+        setEmptyTip( tr( "This collection is empty." ) );
+
+    if ( m_collection.objectCast<ScriptCollection>() )
+        m_trackView->setEmptyTip( tr( "Cloud collections aren't supported in the flat view yet. We will have them covered soon. Switch to another view to navigate them." ) );
 }
 
 
 bool
-FlexibleTreeView::isTemporaryPage() const
+CollectionViewPage::isTemporaryPage() const
 {
-    return m_temporary;
-}
-
-
-void
-FlexibleTreeView::setTemporaryPage( bool b )
-{
-    m_temporary = b;
+    return false;
 }
 
 
 bool
-FlexibleTreeView::isBeingPlayed() const
+CollectionViewPage::isBeingPlayed() const
 {
     if ( !playlistInterface() )
         return false;

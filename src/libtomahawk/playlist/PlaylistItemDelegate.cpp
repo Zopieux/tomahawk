@@ -27,8 +27,6 @@
 #include <QPainter>
 #include <QToolTip>
 
-#include <boost/concept_check.hpp>
-
 #include "Query.h"
 #include "Result.h"
 #include "Artist.h"
@@ -673,7 +671,7 @@ PlaylistItemDelegate::drawTrack( QPainter* painter, const QStyleOptionViewItem& 
         {
             painter->save();
             painter->setPen( Qt::transparent );
-            painter->setBrush( Qt::darkRed );
+            painter->setBrush( QColor( "#ff004c" ));
 
             QRect playBar = r.adjusted( 0, r.height() + 2, 0, 0 );
             playBar.setHeight( 2 );

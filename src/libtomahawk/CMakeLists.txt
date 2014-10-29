@@ -29,6 +29,7 @@ set( libGuiSources
     jobview/JobStatusItem.cpp
     jobview/AclJobItem.cpp
     jobview/PipelineStatusItem.cpp
+    jobview/ScannerStatusItem.cpp
     jobview/TransferStatusItem.cpp
     jobview/LatchedStatusItem.cpp
     jobview/ErrorStatusMessage.cpp
@@ -38,7 +39,6 @@ set( libGuiSources
     playlist/InboxModel.cpp
     playlist/InboxView.cpp
     playlist/ContextView.cpp
-    playlist/FlexibleTreeView.cpp
     playlist/TreeModel.cpp
     playlist/TreeProxyModel.cpp
     playlist/TreeProxyModelPlaylistInterface.cpp
@@ -121,8 +121,8 @@ set( libGuiSources
     viewpages/AlbumViewPage.cpp
     viewpages/TrackViewPage.cpp
     viewpages/PlaylistViewPage.cpp
+    viewpages/CollectionViewPage.cpp
 
-    widgets/AnimatedCounterLabel.cpp
     widgets/AnimatedSplitter.cpp
     widgets/BasicHeader.cpp
     widgets/HoverControls.cpp
@@ -133,7 +133,6 @@ set( libGuiSources
     widgets/ClickableLabel.cpp
     widgets/ComboBox.cpp
     widgets/ElidedLabel.cpp
-    widgets/FadingPixmap.cpp
     widgets/FilterHeader.cpp
     widgets/CaptionLabel.cpp
     widgets/HeaderLabel.cpp
@@ -216,6 +215,7 @@ list(APPEND libSources
     accounts/spotify/SpotifyInfoPlugin.cpp
 
     audio/AudioEngine.cpp
+    audio/AudioOutput.cpp
 
     collection/Collection.cpp
     collection/ArtistsRequest.cpp
@@ -355,6 +355,7 @@ list(APPEND libSources
     utils/WeakObjectHash.cpp
     utils/WeakObjectList.cpp
     utils/PluginLoader.cpp
+    utils/MediaStream.cpp
 )
 
 add_subdirectory( accounts/configstorage )
@@ -391,7 +392,7 @@ include_directories(
     ${QJSON_INCLUDE_DIR}
     ${ECHONEST_INCLUDE_DIR}
     ${LUCENEPP_INCLUDE_DIRS}
-    ${PHONON_INCLUDES}
+    ${LIBVLC_INCLUDE_DIR}
     ${Boost_INCLUDE_DIR}
 
     ${LIBPORTFWD_INCLUDE_DIR}
@@ -440,19 +441,11 @@ IF( APPLE )
       mac/FileHelpers.mm
       widgets/SourceTreePopupDialog_mac.mm )
 
-    if( BUILD_WITH_QT4 )
-        list(APPEND libSources
-            thirdparty/Qocoa/qbutton_mac.mm
-            thirdparty/Qocoa/qsearchfield_mac.mm
-            thirdparty/Qocoa/qtoolbartabdialog_mac.mm
-        )
-    else()
-        list(APPEND libSources
-            thirdparty/Qocoa/qbutton.cpp
-            thirdparty/Qocoa/qsearchfield.cpp
-            thirdparty/Qocoa/qtoolbartabdialog.cpp
-        )
-    endif()
+    list(APPEND libSources
+      thirdparty/Qocoa/qbutton_mac.mm
+      thirdparty/Qocoa/qsearchfield_mac.mm
+      thirdparty/Qocoa/qtoolbartabdialog_mac.mm
+    )
 
     SET_SOURCE_FILES_PROPERTIES(utils/TomahawkUtils_Mac.mm PROPERTIES COMPILE_FLAGS "-fvisibility=default")
 
@@ -491,6 +484,9 @@ set_target_properties(
 
 
 qt5_use_modules(tomahawklib Widgets Network Sql WebKitWidgets Concurrent Xml UiTools Svg)
+IF(APPLE)
+	qt5_use_modules(tomahawklib MacExtras)
+ENDIF()
 
 IF(QCA2_FOUND)
     LIST(APPEND LINK_LIBRARIES ${QCA2_LIBRARIES} )
@@ -503,7 +499,8 @@ ENDIF( UNIX AND NOT APPLE )
 
 TARGET_LINK_LIBRARIES( tomahawklib
     LINK_PRIVATE
-    ${PHONON_LIBRARY}
+    ${LIBVLC_LIBRARY}
+    ${LIBVLCCORE_LIBRARY}
 
     # Thirdparty shipped with tomahawk
     ${LIBPORTFWD_LIBRARIES}
@@ -562,7 +559,7 @@ file( GLOB thirdpartyKdsingleapplicationguardHeaders "thirdparty/kdsingleapplica
 file( GLOB thirdpartyQocoaHeaders "thirdparty/Qocoa/*.h" )
 file( GLOB utilsHeaders "utils/*.h" )
 file( GLOB widgetsHeaders "widgets/*.h" )
-file( GLOB widgetsViewpagesHeaders "viewpages/*.h" )
+file( GLOB viewpagesHeaders "viewpages/*.h" )
 file( GLOB widgetsSearchlineeditHeaders "widgets/searchlineedit/*.h" )
 
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/config.h DESTINATION include/libtomahawk )
@@ -591,5 +588,5 @@ install( FILES ${thirdpartyKdsingleapplicationguardHeaders} DESTINATION include/
 install( FILES ${thirdpartyQocoaHeaders} DESTINATION include/libtomahawk/thirdparty/Qocoa )
 install( FILES ${utilsHeaders} DESTINATION include/libtomahawk/utils )
 install( FILES ${widgetsHeaders} DESTINATION include/libtomahawk/widgets )
-install( FILES ${widgetsViewpagesHeaders} DESTINATION include/libtomahawk/viewpages )
+install( FILES ${viewpagesHeaders} DESTINATION include/libtomahawk/viewpages )
 install( FILES ${widgetsSearchlineeditHeaders} DESTINATION include/libtomahawk/widgets/searchlineedit )

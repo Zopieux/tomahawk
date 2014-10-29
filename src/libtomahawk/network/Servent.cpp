@@ -56,8 +56,6 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 
-#include <boost/bind.hpp>
-
 
 typedef QPair< QList< SipInfo >, Connection* > sipConnectionPair;
 Q_DECLARE_METATYPE( sipConnectionPair )
@@ -89,7 +87,10 @@ Servent::Servent( QObject* parent )
 
     setProxy( QNetworkProxy::NoProxy );
 
-    IODeviceFactoryFunc fac = boost::bind( &Servent::remoteIODeviceFactory, this, _1, _2, _3 );
+    IODeviceFactoryFunc fac = std::bind( &Servent::remoteIODeviceFactory, this,
+                                         std::placeholders::_1,
+                                         std::placeholders::_2,
+                                         std::placeholders::_3 );
     Tomahawk::UrlHandler::registerIODeviceFactory( "servent", fac );
 }
 
@@ -958,28 +959,29 @@ Servent::socketError( QAbstractSocket::SocketError e )
 void
 Servent::checkACLResult( const QString& nodeid, const QString& username, Tomahawk::ACLStatus::Type peerStatus )
 {
+    Q_D( Servent );
 
-    if ( !d_func()->queuedForACLResult.contains( username ) )
+    if ( !d->queuedForACLResult.contains( username ) )
     {
         return;
     }
-    if ( !d_func()->queuedForACLResult.value( username ).contains( nodeid ) )
+    if ( !d->queuedForACLResult.value( username ).contains( nodeid ) )
     {
         return;
     }
 
     tDebug( LOGVERBOSE ) << Q_FUNC_INFO << QString( "ACL status for user %1 is" ).arg( username ) << peerStatus;
-    QSet<Tomahawk::peerinfo_ptr> peerInfos = d_func()->queuedForACLResult.value( username ).value( nodeid );
+    QSet<Tomahawk::peerinfo_ptr> peerInfos = d->queuedForACLResult.value( username ).value( nodeid );
     if ( peerStatus == Tomahawk::ACLStatus::Stream )
     {
-        foreach ( Tomahawk::peerinfo_ptr peerInfo, peerInfos )
+        foreach ( const Tomahawk::peerinfo_ptr& peerInfo, peerInfos )
         {
             registerPeer( peerInfo );
         }
 
     }
     // We have a result, so remove from queue
-    d_func()->queuedForACLResult[username].remove( nodeid );
+    d->queuedForACLResult[username].remove( nodeid );
 }
 
 
@@ -1245,7 +1247,7 @@ Servent::claimOffer( ControlConnection* cc, const QString &nodeid, const QString
 
 void
 Servent::remoteIODeviceFactory( const Tomahawk::result_ptr& result, const QString& url,
-                                boost::function< void ( const QString&, QSharedPointer< QIODevice >& ) > callback )
+                                std::function< void ( const QString&, QSharedPointer< QIODevice >& ) > callback )
 {
     QSharedPointer<QIODevice> sp;
 
@@ -1263,7 +1265,7 @@ Servent::remoteIODeviceFactory( const Tomahawk::result_ptr& result, const QStrin
     StreamConnection* sc = new StreamConnection( this, cc, fileId, result );
     createParallelConnection( cc, sc, QString( "FILE_REQUEST_KEY:%1" ).arg( fileId ) );
 
-    //boost::functions cannot accept temporaries as parameters
+    // std::functions cannot accept temporaries as parameters
     sp = sc->iodevice();
     callback( result->url(), sp );
 }

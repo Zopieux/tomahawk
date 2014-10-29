@@ -1,6 +1,6 @@
 /* === This file is part of Tomahawk Player - <http://tomahawk-player.org> ===
  *
- *   Copyright 2010-2013, Christian Muehlhaeuser <muesli@tomahawk-player.org>
+ *   Copyright 2010-2014, Christian Muehlhaeuser <muesli@tomahawk-player.org>
  *   Copyright 2010-2012, Leo Franchi <lfranchi@kde.org>
  *   Copyright 2010-2012, Jeff Mitchell <jeff@tomahawk-player.org>
  *   Copyright 2012,      Teo Mrnjavac <teo@kde.org>
@@ -113,7 +113,9 @@ TomahawkWindow::TomahawkWindow( QWidget* parent )
     , m_trayIcon( 0 )
     , m_audioRetryCounter( 0 )
 {
+#ifndef Q_OS_MAC
     setWindowIcon( QIcon( RESPATH "icons/tomahawk-icon-128x128.png" ) );
+#endif
 
     new ViewManager( this );
     QueueView* queueView = new QueueView();
@@ -355,6 +357,9 @@ TomahawkWindow::setupToolBar()
     addAction( ActionCollection::instance()->getAction( "toggleMenuBar" ) );
     addAction( ActionCollection::instance()->getAction( "quit" ) );
 #endif
+
+    onHistoryBackAvailable( false );
+    onHistoryForwardAvailable( false );
 
     balanceToolbar();
 }
@@ -1030,7 +1035,10 @@ void
 TomahawkWindow::showSettingsDialog()
 {
     if ( m_settingsDialog )
+    {
+        m_settingsDialog->show();
         return;
+    }
 
     m_settingsDialog = new SettingsDialog;
     // This needs to be a QueuedConnection, so that deleteLater() actually works.
@@ -1081,9 +1089,9 @@ void
 TomahawkWindow::openLogfile()
 {
 #ifdef WIN32
-    ShellExecuteW( 0, 0, (LPCWSTR)Logger::logFile().utf16(), 0, 0, SW_SHOWNORMAL );
+    ShellExecuteW( 0, 0, (LPCWSTR)TomahawkUtils::logFilePath().utf16(), 0, 0, SW_SHOWNORMAL );
 #else
-    QDesktopServices::openUrl( QUrl::fromLocalFile( Logger::logFile() ) );
+    QDesktopServices::openUrl( QUrl::fromLocalFile( TomahawkUtils::logFilePath() ) );
 #endif
 }
 
@@ -1126,7 +1134,7 @@ TomahawkWindow::fullScreenEntered()
 //    margins.setRight( 24 );
 //    statusBar()->setContentsMargins( margins );
 
-#if defined( Q_WS_MAC )
+#if defined( Q_OS_MAC )
     ActionCollection::instance()->getAction( "fullscreen" )->setText( tr( "Exit Full Screen" ) );
 #endif
 }
@@ -1144,7 +1152,7 @@ TomahawkWindow::fullScreenExited()
 //    margins.setRight( 0 );
 //    statusBar()->setContentsMargins( margins );
 
-#if defined( Q_WS_MAC )
+#if defined( Q_OS_MAC )
     ActionCollection::instance()->getAction( "fullscreen" )->setText( tr( "Enter Full Screen" ) );
 #endif
 }
@@ -1473,7 +1481,7 @@ TomahawkWindow::toggleFullscreen()
 {
     tDebug() << Q_FUNC_INFO;
 
-#if defined( Q_WS_MAC )
+#if defined( Q_OS_MAC )
    Tomahawk::toggleFullscreen();
 #endif
 }

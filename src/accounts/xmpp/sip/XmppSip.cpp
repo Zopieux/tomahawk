@@ -92,9 +92,9 @@ JreenMessageHandler( QtMsgType type, const char *msg )
 XmppSipPlugin::XmppSipPlugin( Account* account )
     : SipPlugin( account )
     , m_state( Account::Disconnected )
-    , m_menu( 0 )
-    , m_xmlConsole( 0 )
-    , m_pubSubManager( 0 )
+    , m_menu( nullptr )
+    , m_xmlConsole( nullptr )
+    , m_pubSubManager( nullptr )
 {
 #if QT_VERSION <= QT_VERSION_CHECK( 5, 0, 0 )
     Jreen::Logger::addHandler( JreenMessageHandler );
@@ -1067,7 +1067,7 @@ bool
 XmppSipPlugin::readXmlConsoleEnabled()
 {
     // HACK we want to allow xmlconsole to be set manually in the onfig file, which means we can't hide it in a QVariantHash
-    const bool xmlConsole = TomahawkSettings::instance()->value( QString( "accounts/%1/xmlconsole" ).arg( account()->accountId() ), false ).toBool();
+    const bool xmlConsole = TomahawkSettings::instance()->value( QString( "accounts/%1/xmlconsole" ).arg( m_account->accountId() ), false ).toBool();
     return xmlConsole;
 }
 

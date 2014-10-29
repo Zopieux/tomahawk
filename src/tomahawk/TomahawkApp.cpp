@@ -21,8 +21,6 @@
 
 #include "TomahawkApp.h"
 
-#include <boost/bind.hpp>
-
 #include "TomahawkVersion.h"
 #include "AclRegistryImpl.h"
 #include "Album.h"
@@ -103,6 +101,7 @@
 #include <QTime>
 #include <QMessageBox>
 #include <QNetworkReply>
+#include <QProgressDialog>
 #include <QFile>
 #include <QFileInfo>
 #include <QTranslator>
@@ -115,7 +114,7 @@ const char* enApiSecret = "BNvTzfthHr/d1eNhHLvL1Jo=";
 void
 increaseMaxFileDescriptors()
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     /// Following code taken from Clementine project, main.cpp. Thanks!
     // Bump the soft limit for the number of file descriptors from the default of 256 to
     // the maximum (usually 1024).
@@ -140,8 +139,8 @@ using namespace Tomahawk;
 
 TomahawkApp::TomahawkApp( int& argc, char *argv[] )
     : TOMAHAWK_APPLICATION( argc, argv )
-    , m_mainwindow( 0 )
-    , m_splashWidget( 0 )
+    , m_mainwindow( nullptr )
+    , m_splashWidget( nullptr )
     , m_headless( false )
 {
     if ( arguments().contains( "--help" ) || arguments().contains( "-h" ) )
@@ -164,7 +163,9 @@ void
 TomahawkApp::init()
 {
     qDebug() << "TomahawkApp thread:" << thread();
-    Logger::setupLogfile();
+    m_logFile.setFileName( TomahawkUtils::logFilePath() );
+    Logger::setupLogfile( m_logFile );
+
     qsrand( QTime( 0, 0, 0 ).secsTo( QTime::currentTime() ) );
 
     tLog() << "Starting Tomahawk...";
@@ -224,8 +225,12 @@ TomahawkApp::init()
     tDebug() << "Init Database.";
     initDatabase();
 
-    Pipeline::instance()->addExternalResolverFactory( boost::bind( &JSResolver::factory, _1, _2, _3 ) );
-    Pipeline::instance()->addExternalResolverFactory( boost::bind( &ScriptResolver::factory, _1, _2, _3 ) );
+    Pipeline::instance()->addExternalResolverFactory(
+                std::bind( &JSResolver::factory, std::placeholders::_1,
+                           std::placeholders::_2, std::placeholders::_3 ) );
+    Pipeline::instance()->addExternalResolverFactory(
+                std::bind( &ScriptResolver::factory, std::placeholders::_1,
+                           std::placeholders::_2, std::placeholders::_3 ) );
 
     new ActionCollection( this );
     connect( ActionCollection::instance()->getAction( "quit" ), SIGNAL( triggered() ), SLOT( quit() ), Qt::UniqueConnection );
@@ -467,6 +472,8 @@ TomahawkApp::initDatabase()
     m_database = QPointer<Tomahawk::Database>( new Tomahawk::Database( dbpath, this ) );
     // this also connects dbImpl schema update signals
 
+    connect( m_database.data(), SIGNAL( waitingForWorkers() ), SLOT( onShutdownDelayed() ) );
+
     Pipeline::instance()->databaseReady();
 }
 
@@ -592,6 +599,25 @@ TomahawkApp::initSIP()
 
 
 void
+TomahawkApp::onShutdownDelayed()
+{
+    QProgressDialog* d = new QProgressDialog( tr( "Tomahawk is updating the database. Please wait, this may take a minute!" ), QString(),
+                                              0, 0, 0, Qt::Tool
+                                              | Qt::WindowTitleHint
+                                              | Qt::CustomizeWindowHint );
+    d->setModal( true );
+    d->setAutoClose( false );
+    d->setAutoReset( false );
+    d->setWindowTitle( tr( "Tomahawk" ) );
+
+#ifdef Q_OS_MAC
+    d->setAttribute( Qt::WA_MacAlwaysShowToolWindow );
+#endif
+    d->show();
+}
+
+
+void
 TomahawkApp::onInfoSystemReady()
 {
     tDebug() << "Init AccountManager.";
@@ -604,6 +630,7 @@ TomahawkApp::onInfoSystemReady()
     Echonest::Config::instance()->setNetworkAccessManager( Tomahawk::Utils::nam() );
     EchonestGenerator::setupCatalogs();
 
+    m_scanManager = QPointer<ScanManager>( new ScanManager( this ) );
     if ( !m_headless )
     {
         tDebug() << "Init MainWindow.";
@@ -622,10 +649,10 @@ TomahawkApp::onInfoSystemReady()
     tDebug() << "Init Pipeline.";
     initPipeline();
 
-    m_scanManager = QPointer<ScanManager>( new ScanManager( this ) );
+    m_scanManager->init();
     if ( arguments().contains( "--filescan" ) )
     {
-        m_scanManager.data()->runFullRescan();
+        m_scanManager->runFullRescan();
     }
 
     // load remote list of resolvers able to be installed

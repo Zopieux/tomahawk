@@ -246,7 +246,7 @@ GridView::resizeEvent( QResizeEvent* event )
 
 void GridView::wheelEvent( QWheelEvent* e )
 {
-#ifndef Q_WS_MAC
+#ifndef Q_OS_MAC
     //HACK: Workaround for QTBUG-7232: Smooth scrolling (scroll per pixel) in ItemViews
     //      does not work as expected.
     verticalScrollBar()->setSingleStep( delegate()->itemSize().height() / 8 );
@@ -298,7 +298,7 @@ GridView::verifySize()
 
     if ( !isWrapping() )
     {
-        m_proxyModel->setMaxVisibleItems( qMin( itemsPerRow, m_model->rowCount( QModelIndex() ) ) );
+        m_proxyModel->setMaxVisibleItems( itemsPerRow );
     }
     else if ( newHeight > 0 )
     {
@@ -565,4 +565,11 @@ GridView::onScrollTimeout()
     {
         m_proxyModel->updateDetailedInfo( m_proxyModel->index( i, 0 ) );
     }
+}
+
+
+PlayableModel*
+GridView::model() const
+{
+    return m_model.data();
 }

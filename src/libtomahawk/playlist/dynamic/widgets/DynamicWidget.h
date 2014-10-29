@@ -27,17 +27,11 @@
 #include "playlist/dynamic/DynamicPlaylistRevision.h"
 
 class AnimatedSpinner;
+class BasicHeader;
 class QShowEvent;
 class QHideEvent;
-class QSpinBox;
 class QVBoxLayout;
-class QHBoxLayout;
-class QPushButton;
-class QComboBox;
-class PlaylistModel;
-class AnimatedSplitter;
 class QLabel;
-class ReadOrWriteWidget;
 
 namespace Tomahawk
 {
@@ -66,7 +60,7 @@ public:
 
     virtual QSize sizeHint() const;
     virtual void resizeEvent( QResizeEvent* );
-    virtual void showEvent(QShowEvent* );
+    virtual void showEvent( QShowEvent* );
 
     static void paintRoundedFilledRect( QPainter& p, QPalette& pal, QRect& r, qreal opacity = .95 );
 
@@ -80,7 +74,7 @@ public:
 
 public slots:
     void onRevisionLoaded( const Tomahawk::DynamicPlaylistRevision& rev );
-    void playlistTypeChanged(QString);
+    void playlistTypeChanged( QString );
 
     void startStation();
     void stopStation( bool stopPlaying = true );
@@ -128,6 +122,7 @@ private:
     bool m_controlsChanged;
     QWidget* m_steering;
 
+    BasicHeader* m_header;
     CollapsibleControls* m_controls;
 
     DynamicView* m_view;

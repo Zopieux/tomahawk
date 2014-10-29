@@ -12,8 +12,8 @@ SET(WINDRES_EXECUTABLE  ${CMAKE_RC_COMPILER})
 
 # adds application icon to target source list 
 # for detailed documentation see the top of FindKDE4Internal.cmake
-macro (KDE4_ADD_APP_ICON appsources pattern)
-    set (_outfilename ${CMAKE_CURRENT_BINARY_DIR}/${appsources})
+macro (TOMAHAWK_ADD_APP_ICON appsources outfilename pattern)
+    set (_outfilename ${CMAKE_CURRENT_BINARY_DIR}/${outfilename})
 
     if (WIN32)
         if(NOT WINCE)
@@ -69,7 +69,7 @@ macro (KDE4_ADD_APP_ICON appsources pattern)
             message(STATUS "Unable to find the png2ico or windres utilities - application will not have an application icon!")
         endif(PNG2ICO_EXECUTABLE AND WINDRES_EXECUTABLE)
     endif(WIN32)
-    if (Q_WS_MAC)
+    if (Q_OS_MAC)
         # first convert image to a tiff using the Mac OS X "sips" utility,
         # then use tiff2icns to convert to an icon
         find_program(SIPS_EXECUTABLE NAMES sips)
@@ -86,9 +86,9 @@ macro (KDE4_ADD_APP_ICON appsources pattern)
             if (_icon)
                 
                 # first, get the basename of our app icon
-                add_custom_command(OUTPUT ${_outfilename}.icns ${outfilename}.tiff
-                                   COMMAND ${SIPS_EXECUTABLE} -s format tiff ${_icon} --out ${outfilename}.tiff
-                                   COMMAND ${TIFF2ICNS_EXECUTABLE} ${outfilename}.tiff ${_outfilename}.icns
+                add_custom_command(OUTPUT ${_outfilename}.icns ${_outfilename}.tiff
+                                   COMMAND ${SIPS_EXECUTABLE} -s format tiff ${_icon} --out ${_outfilename}.tiff
+                                   COMMAND ${TIFF2ICNS_EXECUTABLE} ${_outfilename}.tiff ${_outfilename}.icns
                                    DEPENDS ${_icon}
                                    )
 
@@ -110,5 +110,5 @@ macro (KDE4_ADD_APP_ICON appsources pattern)
         else(SIPS_EXECUTABLE AND TIFF2ICNS_EXECUTABLE)
             message(STATUS "Unable to find the sips and tiff2icns utilities - application will not have an application icon!")
         endif(SIPS_EXECUTABLE AND TIFF2ICNS_EXECUTABLE)
-    endif(Q_WS_MAC)
-endmacro (KDE4_ADD_APP_ICON)
+    endif(Q_OS_MAC)
+endmacro (TOMAHAWK_ADD_APP_ICON)

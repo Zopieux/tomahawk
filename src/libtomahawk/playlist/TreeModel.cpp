@@ -132,30 +132,6 @@ TreeModel::fetchMore( const QModelIndex& parent )
 
 
 void
-TreeModel::addAllCollections()
-{
-    startLoading();
-
-    DatabaseCommand_AllArtists* cmd = new DatabaseCommand_AllArtists();
-
-    connect( cmd, SIGNAL( artists( QList<Tomahawk::artist_ptr> ) ),
-                    SLOT( onArtistsAdded( QList<Tomahawk::artist_ptr> ) ) );
-
-    Database::instance()->enqueue( Tomahawk::dbcmd_ptr( cmd ) );
-
-    connect( SourceList::instance(), SIGNAL( sourceAdded( Tomahawk::source_ptr ) ), SLOT( onSourceAdded( Tomahawk::source_ptr ) ), Qt::UniqueConnection );
-
-    QList<Tomahawk::source_ptr> sources = SourceList::instance()->sources();
-    foreach ( const source_ptr& source, sources )
-    {
-        connect( source->dbCollection().data(), SIGNAL( changed() ), SLOT( onCollectionChanged() ), Qt::UniqueConnection );
-    }
-
-    setTitle( tr( "All Artists" ) );
-}
-
-
-void
 TreeModel::addArtists( const artist_ptr& artist )
 {
     if ( artist.isNull() )
@@ -217,10 +193,9 @@ TreeModel::addAlbums( const QModelIndex& parent, const QList<Tomahawk::album_ptr
 
     emit beginInsertRows( parent, crows.first, crows.second );
 
-    PlayableItem* albumitem = 0;
     foreach( const album_ptr& album, albums )
     {
-        albumitem = new PlayableItem( album, parentItem );
+        PlayableItem* albumitem = new PlayableItem( album, parentItem );
         albumitem->index = createIndex( parentItem->children.count() - 1, 0, albumitem );
         connect( albumitem, SIGNAL( dataChanged() ), SLOT( onDataChanged() ) );
 
@@ -262,22 +237,9 @@ TreeModel::addCollection( const collection_ptr& collection )
              this, SLOT( onArtistsAdded( QList< Tomahawk::artist_ptr > ) ), Qt::UniqueConnection );
     req->enqueue();
 
-    connect( collection.data(), SIGNAL( changed() ), SLOT( onCollectionChanged() ), Qt::UniqueConnection );
-
     setIcon( collection->bigIcon() );
     setTitle( collection->prettyName() );
     setDescription( collection->description() );
-}
-
-
-void
-TreeModel::reloadCollection()
-{
-    if ( m_collection.isNull() )
-        return;
-
-    if ( !isLoading() )
-        onCollectionChanged();
 }
 
 
@@ -306,25 +268,6 @@ TreeModel::reloadCollection()
 
 
 void
-TreeModel::onSourceAdded( const Tomahawk::source_ptr& source )
-{
-    connect( source->dbCollection().data(), SIGNAL( changed() ), SLOT( onCollectionChanged() ), Qt::UniqueConnection );
-}
-
-
-void
-TreeModel::onCollectionChanged()
-{
-    clear();
-
-    if ( m_collection )
-        addCollection( m_collection );
-    else
-        addAllCollections();
-}
-
-
-void
 TreeModel::onArtistsAdded( const QList<Tomahawk::artist_ptr>& artists )
 {
     finishLoading();
@@ -339,10 +282,9 @@ TreeModel::onArtistsAdded( const QList<Tomahawk::artist_ptr>& artists )
 
     emit beginInsertRows( QModelIndex(), crows.first, crows.second );
 
-    PlayableItem* artistitem;
     foreach( const artist_ptr& artist, artists )
     {
-        artistitem = new PlayableItem( artist, rootItem() );
+        PlayableItem* artistitem = new PlayableItem( artist, rootItem() );
         artistitem->index = createIndex( rootItem()->children.count() - 1, 0, artistitem );
         connect( artistitem, SIGNAL( dataChanged() ), SLOT( onDataChanged() ) );
     }
@@ -368,10 +310,9 @@ TreeModel::onTracksAdded( const QList<Tomahawk::query_ptr>& tracks, const QModel
 
     emit beginInsertRows( parent, crows.first, crows.second );
 
-    PlayableItem* item = 0;
     foreach( const query_ptr& query, tracks )
     {
-        item = new PlayableItem( query, parentItem );
+        PlayableItem* item = new PlayableItem( query, parentItem );
         item->index = createIndex( parentItem->children.count() - 1, 0, item );
 
         connect( item, SIGNAL( dataChanged() ), SLOT( onDataChanged() ) );

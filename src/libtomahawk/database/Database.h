@@ -101,11 +101,15 @@ public:
     }
 
 signals:
-    void indexReady(); // search index
+    void indexStarted();
+    void indexReady();
     void ready();
 
     void newJobRO( Tomahawk::dbcmd_ptr );
     void newJobRW( Tomahawk::dbcmd_ptr );
+
+    void waitingForWorkers();
+    void workersFinished();
 
 public slots:
     void enqueue( const Tomahawk::dbcmd_ptr& lc );

@@ -290,11 +290,10 @@ PlaylistModel::insertEntries( const QList< Tomahawk::plentry_ptr >& entries, int
 
     QList< Tomahawk::query_ptr > queries;
     int i = 0;
-    PlayableItem* plitem;
     foreach( const plentry_ptr& entry, entries )
     {
         PlayableItem* pItem = itemFromIndex( parent );
-        plitem = new PlayableItem( entry, pItem, row + i );
+        PlayableItem* plitem = new PlayableItem( entry, pItem, row + i );
         plitem->index = createIndex( row + i, 0, plitem );
 
         if ( logs.count() > i )
@@ -417,7 +416,7 @@ PlaylistModel::dropMimeData( const QMimeData* data, Qt::DropAction action, int r
 /*    if ( action & Qt::MoveAction )
         dj->setDropAction( DropJob::Move ); */
 
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     // On mac, drags from outside the app are still Qt::MoveActions instead of Qt::CopyAction by default
     // so check if the drag originated in this playlist to determine whether or not to copy
     if ( !data->hasFormat( "application/tomahawk.playlist.id" ) ||

@@ -41,7 +41,6 @@
 #include "SourceList.h"
 #include "UrlHandler.h"
 
-#include <boost/bind.hpp>
 #include <QFile>
 #include <QFileInfo>
 #include <QMap>
@@ -320,7 +319,7 @@ JSResolverHelper::addUrlResult( const QString& url, const QVariantMap& result )
         QString guid = result.value( "guid" ).toString();
         Q_ASSERT( !guid.isEmpty() );
         // Append nodeid to guid to make it globally unique.
-        guid += Tomahawk::Database::instance()->impl()->dbid();
+        guid += instanceUUID();
 
         // Do we already have this playlist loaded?
         {
@@ -355,7 +354,7 @@ JSResolverHelper::addUrlResult( const QString& url, const QVariantMap& result )
     {
         QString xspfUrl = result.value( "url" ).toString();
         Q_ASSERT( !xspfUrl.isEmpty() );
-        QString guid = QString( "xspf-%1-%2" ).arg( xspfUrl.toUtf8().toBase64().constData() ).arg( Tomahawk::Database::instance()->impl()->dbid() );
+        QString guid = QString( "xspf-%1-%2" ).arg( xspfUrl.toUtf8().toBase64().constData() ).arg( instanceUUID() );
 
         // Do we already have this playlist loaded?
         {
@@ -389,7 +388,7 @@ JSResolverHelper::addUrlResult( const QString& url, const QVariantMap& result )
 void
 JSResolverHelper::reportCapabilities( const QVariant& v )
 {
-    bool ok = 0;
+    bool ok;
     int intCap = v.toInt( &ok );
     Tomahawk::ExternalResolver::Capabilities capabilities;
     if ( !ok )
@@ -430,7 +429,7 @@ JSResolverHelper::setResolverConfig( const QVariantMap& config )
 
 
 QString
-JSResolverHelper::acountId()
+JSResolverHelper::accountId()
 {
     return m_resolver->d_func()->accountId;
 }
@@ -441,11 +440,13 @@ JSResolverHelper::addCustomUrlHandler( const QString& protocol,
                                              const QString& callbackFuncName,
                                              const QString& isAsynchronous )
 {
-    m_urlCallbackIsAsync = ( isAsynchronous.toLower() == "true" ) ? true : false;
+    m_urlCallbackIsAsync = ( isAsynchronous.toLower() == "true" );
 
-    boost::function< void( const Tomahawk::result_ptr&, const QString&,
-                           boost::function< void( const QString&, QSharedPointer< QIODevice >& ) > )> fac =
-            boost::bind( &JSResolverHelper::customIODeviceFactory, this, _1, _2, _3 );
+    std::function< void( const Tomahawk::result_ptr&, const QString&,
+                           std::function< void( const QString&, QSharedPointer< QIODevice >& ) > )> fac =
+            std::bind( &JSResolverHelper::customIODeviceFactory, this,
+                       std::placeholders::_1, std::placeholders::_2,
+                       std::placeholders::_3 );
     Tomahawk::UrlHandler::registerIODeviceFactory( protocol, fac );
 
     m_urlCallback = callbackFuncName;
@@ -461,7 +462,7 @@ JSResolverHelper::reportStreamUrl( const QString& qid, const QString& streamUrl 
 
 void
 JSResolverHelper::customIODeviceFactory( const Tomahawk::result_ptr&, const QString& url,
-                                               boost::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback )
+                                               std::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback )
 {
     //can be sync or async
     if ( m_urlCallbackIsAsync )
@@ -493,7 +494,7 @@ JSResolverHelper::reportStreamUrl( const QString& qid,
     if ( !m_streamCallbacks.contains( qid ) )
         return;
 
-    boost::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback = m_streamCallbacks.take( qid );
+    std::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback = m_streamCallbacks.take( qid );
 
     QMap<QString, QString> parsedHeaders;
     foreach ( const QString& key,  headers.keys()) {
@@ -764,13 +765,13 @@ JSResolverHelper::indexDataFromVariant( const QVariantMap &map, struct Tomahawk:
 void
 JSResolverHelper::createFuzzyIndex( const QVariantList& list )
 {
-    if ( m_resolver->d_func()->fuzzyIndex.isNull() )
+    if ( hasFuzzyIndex() )
     {
-        m_resolver->d_func()->fuzzyIndex.reset( new FuzzyIndex( m_resolver, m_resolver->d_func()->accountId + ".lucene" , true ) );
+        m_resolver->d_func()->fuzzyIndex->wipeIndex();
     }
     else
     {
-        m_resolver->d_func()->fuzzyIndex->wipeIndex();
+        m_resolver->d_func()->fuzzyIndex.reset( new FuzzyIndex( m_resolver, accountId() + ".lucene" , true ) );
     }
 
     addToFuzzyIndex( list );
@@ -780,7 +781,7 @@ JSResolverHelper::createFuzzyIndex( const QVariantList& list )
 void
 JSResolverHelper::addToFuzzyIndex( const QVariantList& list )
 {
-    if ( m_resolver->d_func()->fuzzyIndex.isNull() )
+    if ( !hasFuzzyIndex() )
     {
         tLog() << Q_FUNC_INFO << "Cannot add entries to non-existing index.";
         return;
@@ -809,7 +810,7 @@ JSResolverHelper::addToFuzzyIndex( const QVariantList& list )
 
 
 bool
-cmpTuple ( QVariant x, QVariant y )
+cmpTuple ( const QVariant& x, const QVariant& y )
 {
     return x.toList().at( 1 ).toFloat() < y.toList().at( 1 ).toFloat();
 }
@@ -873,7 +874,7 @@ JSResolverHelper::deleteFuzzyIndex()
 
 void
 JSResolverHelper::returnStreamUrl( const QString& streamUrl, const QMap<QString, QString>& headers,
-                                   boost::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback )
+                                   std::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback )
 {
     if ( streamUrl.isEmpty() || !( TomahawkUtils::isHttpResult( streamUrl ) || TomahawkUtils::isHttpsResult( streamUrl ) ) )
     {
@@ -899,10 +900,10 @@ JSResolverHelper::returnStreamUrl( const QString& streamUrl, const QMap<QString,
 Q_DECLARE_METATYPE( IODeviceCallback )
 
 void
-JSResolverHelper::gotStreamUrl( boost::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback, NetworkReply* reply )
+JSResolverHelper::gotStreamUrl( std::function< void( const QString&, QSharedPointer< QIODevice >& ) > callback, NetworkReply* reply )
 {
-    //boost::functions cannot accept temporaries as parameters
-    QSharedPointer< QIODevice > sp = QSharedPointer< QIODevice >( reply->reply(), &QObject::deleteLater );
+    // std::functions cannot accept temporaries as parameters
+    QSharedPointer< QIODevice > sp ( reply->reply(), &QObject::deleteLater );
     QString url = reply->reply()->url().toString();
     reply->disconnectFromReply();
     reply->deleteLater();

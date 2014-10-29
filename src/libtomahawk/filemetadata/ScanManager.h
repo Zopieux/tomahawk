@@ -52,7 +52,7 @@ private:
     QPointer< MusicScanner > m_musicScanner;
     MusicScanner::ScanMode m_mode;
     QStringList m_paths;
-    quint32 m_bs; 
+    quint32 m_bs;
 };
 
 
@@ -66,7 +66,11 @@ public:
     explicit ScanManager( QObject* parent = 0 );
     virtual ~ScanManager();
 
+    void init();
+
 signals:
+    void started();
+    void progress( unsigned int files );
     void finished();
 
 public slots:

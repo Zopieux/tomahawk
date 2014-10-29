@@ -46,10 +46,6 @@
 #include <QMimeData>
 #include <QSize>
 
-#include <boost/bind.hpp>
-#include <boost/lambda/construct.hpp>
-#include <boost/lambda/bind.hpp>
-
 using namespace Tomahawk;
 
 
@@ -276,7 +272,7 @@ SourcesModel::dropMimeData( const QMimeData* data, Qt::DropAction action, int ro
 Qt::DropActions
 SourcesModel::supportedDropActions() const
 {
-#ifdef Q_WS_MAC
+#ifdef Q_OS_MAC
     return Qt::CopyAction | Qt::MoveAction;
 #else
     return Qt::CopyAction;
@@ -329,15 +325,15 @@ void
 SourcesModel::appendPageItem( const QString& name, ViewPage* page, int sortValue )
 {
     // If there should be no page item, there is nothing to do for us here.
-    if ( !page->addPageItem() ) {
+    if ( !page->addPageItem() )
         return;
-    }
 
     QModelIndex parentIndex = indexFromItem( m_browse );
     beginInsertRows( parentIndex, rowCount( parentIndex ), rowCount( parentIndex ) );
-    GenericPageItem* pageItem = new GenericPageItem( this, m_browse, page->title(), page->pixmap(),
-                                            boost::bind( &ViewManager::showDynamicPage, ViewManager::instance(), name ),
-                                            boost::bind( &ViewManager::dynamicPageWidget, ViewManager::instance(), name ) );
+    GenericPageItem* pageItem = new GenericPageItem( this, m_browse, page->title(),
+                                                     page->pixmap(),
+                                                     std::bind( &ViewManager::showDynamicPage, ViewManager::instance(), name ),
+                                                     std::bind( &ViewManager::dynamicPageWidget, ViewManager::instance(), name ) );
     pageItem->setDeletable( page->isDeletable() );
 
     if ( sortValue )
@@ -566,7 +562,7 @@ SourcesModel::onScriptCollectionRemoved( const collection_ptr& collection )
 
 
 void
-SourcesModel::onViewPageRemoved( Tomahawk::ViewPage *p )
+SourcesModel::onViewPageRemoved( Tomahawk::ViewPage* p )
 {
     p->onItemDeleted();
 }
@@ -664,7 +660,8 @@ SourcesModel::linkSourceItemToPage( SourceTreeItem* item, ViewPage* p )
     }
     m_viewPageDelayedCacheItem = 0;
 
-    if ( p && p->isDeletable() ) {
+    if ( p && p->isDeletable() )
+    {
         NewClosure( item, SIGNAL( removed() ), this, SLOT( onViewPageRemoved( Tomahawk::ViewPage* ) ), p );
     }
 }

@@ -34,7 +34,8 @@ DatabaseCommand_Resolve::DatabaseCommand_Resolve( const query_ptr& query )
     : DatabaseCommand()
     , m_query( query )
 {
-    Q_ASSERT( Pipeline::instance()->isRunning() );
+    // FIXME: We need to run tests of this DbCmd without a Pipeline
+    // Q_ASSERT( Pipeline::instance()->isRunning() );
 }
 
 
@@ -145,9 +146,14 @@ DatabaseCommand_Resolve::resolve( DatabaseImpl* lib )
         }
 
         track_ptr track = Track::get( files_query.value( 9 ).toUInt(), files_query.value( 12 ).toString(), files_query.value( 14 ).toString(), files_query.value( 13 ).toString(), files_query.value( 5 ).toUInt(), files_query.value( 15 ).toString(), files_query.value( 17 ).toUInt(), files_query.value( 11 ).toUInt() );
+        if ( !track )
+            continue;
         track->loadAttributes();
 
         result = Result::get( url, track );
+        if ( !result )
+            continue;
+
         result->setModificationTime( files_query.value( 1 ).toUInt() );
         result->setSize( files_query.value( 2 ).toUInt() );
         result->setMimetype( files_query.value( 4 ).toString() );
@@ -172,12 +178,12 @@ DatabaseCommand_Resolve::fullTextResolve( DatabaseImpl* lib )
     QList< QPair<int, float> > trackPairs = lib->search( m_query );
     QList< QPair<int, float> > albumPairs = lib->searchAlbum( m_query, 20 );
 
+    TomahawkSqlQuery query = lib->newquery();
+    query.prepare( "SELECT album.name, artist.id, artist.name FROM album, artist WHERE artist.id = album.artist AND album.id = ?" );
+
     foreach ( const scorepair_t& albumPair, albumPairs )
     {
-        TomahawkSqlQuery query = lib->newquery();
-
-        QString sql = QString( "SELECT album.name, artist.id, artist.name FROM album, artist WHERE artist.id = album.artist AND album.id = %1" ).arg( albumPair.first );
-        query.prepare( sql );
+        query.bindValue( 0, albumPair.first );
         query.exec();
 
         QList<Tomahawk::album_ptr> albumList;

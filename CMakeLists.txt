@@ -20,6 +20,11 @@ SET( TOMAHAWK_ORGANIZATION_NAME "Tomahawk" )
 SET( TOMAHAWK_ORGANIZATION_DOMAIN "tomahawk-player.org" )
 SET( TOMAHAWK_APPLICATION_NAME  "Tomahawk" )
 SET( TOMAHAWK_DESCRIPTION_SUMMARY "The social media player" )
+IF(APPLE)
+    SET( TOMAHAWK_TARGET_NAME "Tomahawk" )
+ELSE()
+    SET( TOMAHAWK_TARGET_NAME "tomahawk" )
+ENDIF()
 
 IF( WIN32 )
     SET( TOMAHAWK_SYSTEM "Windows" )
@@ -34,7 +39,7 @@ ENDIF()
 SET( TOMAHAWK_VERSION_MAJOR 0 )
 SET( TOMAHAWK_VERSION_MINOR 8 )
 SET( TOMAHAWK_VERSION_PATCH 99 )
-#SET( TOMAHAWK_VERSION_RC 0 )
+SET( TOMAHAWK_VERSION_RC 0 )
 
 SET( TOMAHAWK_TRANSLATION_LANGUAGES ar bg bn_IN ca cs de en el es fi fr hi_IN hu gl it ja lt pl pt_BR ro ru sv tr zh_CN zh_TW )
 
@@ -52,17 +57,27 @@ tomahawk_add_definitions( "-fvisibility=hidden" )
 tomahawk_add_definitions( "-DQT_STRICT_ITERATORS" )
 
 # build options
-option(BUILD_GUI "Build Tomahawk with GUI" ON)
 option(BUILD_RELEASE "Generate TOMAHAWK_VERSION without GIT info" OFF)
-option(BUILD_TESTS "Build Tomahawk with unit tests" ON)
-option(BUILD_HATCHET "Build the Hatchet plugin" OFF)
+if(BUILD_RELEASE)
+    set(BUILD_NO_RELEASE OFF)
+else()
+    set(BUILD_NO_RELEASE ON)
+endif()
+
+option(BUILD_GUI "Build Tomahawk with GUI" ON)
+option(BUILD_TESTS "Build Tomahawk with unit tests" ${BUILD_NO_RELEASE})
+option(BUILD_TOOLS "Build Tomahawk helper tools" ${BUILD_NO_RELEASE})
+option(BUILD_HATCHET "Build the Hatchet plugin" ON)
 option(BUILD_WITH_QT4 "Build Tomahawk with Qt4 no matter if Qt5 was found" ON)
 
-option(SANITIZE_ADDRESS "Enable Address Sanitizer for memory error detection" OFF)
 option(WITH_CRASHREPORTER "Build with CrashReporter" ON)
 option(WITH_BINARY_ATTICA "Enable support for downloading binary resolvers automatically" ON)
 option(LEGACY_KDE_INTEGRATION "Install tomahawk.protocol file, deprecated since 4.6.0" OFF)
 option(WITH_KDE4 "Build with support for KDE specific stuff" ON)
+
+# build options for development purposes
+option(SANITIZE_ADDRESS "Enable Address Sanitizer for memory error detection" OFF)
+option(TOMAHAWK_FINEGRAINED_MESSAGES "Enable even more verbose logging (will hurt performance significantly" OFF)
 
 CMAKE_DEPENDENT_OPTION(WITH_UPOWER "Build with support for UPower events" ON
        "UNIX;NOT APPLE" OFF)
@@ -77,26 +92,28 @@ ENDIF()
 # generate version string
 
 # base string used in release and unstable builds
-SET( TOMAHAWK_VERSION ${TOMAHAWK_VERSION_MAJOR}.${TOMAHAWK_VERSION_MINOR}.${TOMAHAWK_VERSION_PATCH} )
-SET( TOMAHAWK_VERSION_SHORT "${TOMAHAWK_VERSION}" )
+SET( TOMAHAWK_VERSION_TMP "${TOMAHAWK_VERSION_MAJOR}.${TOMAHAWK_VERSION_MINOR}.${TOMAHAWK_VERSION_PATCH}")
+SET( TOMAHAWK_VERSION_SHORT "${TOMAHAWK_VERSION_TMP}" )
 IF( TOMAHAWK_VERSION_RC )
-  SET( TOMAHAWK_VERSION ${TOMAHAWK_VERSION}rc${TOMAHAWK_VERSION_RC} )
+  SET( TOMAHAWK_VERSION_TMP "${TOMAHAWK_VERSION_TMP}rc${TOMAHAWK_VERSION_RC}")
 ENDIF()
-
 
 # additional info for non-release builds
 IF( NOT BUILD_RELEASE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git/" )
     INCLUDE( CMakeDateStamp )
     SET( TOMAHAWK_VERSION_DATE "${CMAKE_DATESTAMP_YEAR}${CMAKE_DATESTAMP_MONTH}${CMAKE_DATESTAMP_DAY}" )
     IF( TOMAHAWK_VERSION_DATE GREATER 0 )
-        SET( TOMAHAWK_VERSION ${TOMAHAWK_VERSION}.${TOMAHAWK_VERSION_DATE} )
+        SET( TOMAHAWK_VERSION_TMP ${TOMAHAWK_VERSION_TMP}.${TOMAHAWK_VERSION_DATE} )
     ENDIF()
 
     INCLUDE( CMakeVersionSource )
     IF( CMAKE_VERSION_SOURCE )
-        SET( TOMAHAWK_VERSION ${TOMAHAWK_VERSION}-${CMAKE_VERSION_SOURCE} )
+        SET( TOMAHAWK_VERSION_TMP ${TOMAHAWK_VERSION_TMP}-${CMAKE_VERSION_SOURCE} )
     ENDIF()
 ENDIF()
+
+# write Tomahawk version to cache
+SET(TOMAHAWK_VERSION "${TOMAHAWK_VERSION_TMP}" CACHE STRING "Tomahawk Version")
 
 
 # set paths
@@ -134,6 +151,10 @@ if( NOT BUILD_WITH_QT4 )
             find_package(Qt5DBus REQUIRED)
         endif()
 
+	if(APPLE)
+            find_package(Qt5MacExtras REQUIRED)
+	endif()
+
         if(WIN32)
             find_package(Qt5WinExtras REQUIRED)
         endif()
@@ -151,13 +172,15 @@ if( NOT BUILD_WITH_QT4 )
             qt5_add_translation(${ARGN})
         endmacro()
 
-        macro(qt_add_dbus_interface)
-            qt5_add_dbus_interface(${ARGN})
-        endmacro()
+	if( UNIX AND NOT APPLE )
+            macro(qt_add_dbus_interface)
+                qt5_add_dbus_interface(${ARGN})
+            endmacro()
 
-        macro(qt_add_dbus_adaptor)
-            qt5_add_dbus_adaptor(${ARGN})
-        endmacro()
+            macro(qt_add_dbus_adaptor)
+                qt5_add_dbus_adaptor(${ARGN})
+            endmacro()
+	endif()
 
         macro(setup_qt)
         endmacro()
@@ -179,7 +202,7 @@ if( NOT Qt5Core_DIR )
     endif()
 
     macro_optional_find_package(Qt4 4.7.0 COMPONENTS ${NEEDED_QT4_COMPONENTS} )
-    macro_log_feature(QT4_FOUND "Qt" "A cross-platform application and UI framework" "http://qt.nokia.com" TRUE "" "If you see this, although libqt4-devel is installed, check whether the \n     qtwebkit-devel package and whatever contains QtUiTools is installed too")
+    macro_log_feature(QT4_FOUND "Qt" "A cross-platform application and UI framework" "http://qt-project.org" TRUE "" "If you see this, although libqt4-devel is installed, check whether the \n     qtwebkit-devel package and whatever contains QtUiTools is installed too")
 
     macro(qt5_use_modules)
     endmacro()
@@ -232,17 +255,24 @@ else( Qt5Core_DIR )
 endif( Qt5Core_DIR )
 
 if( BUILD_GUI AND UNIX AND NOT APPLE )
-    find_package( X11 )
+    macro_optional_find_package( X11 )
+    macro_log_feature(X11_FOUND "X11" "The Xorg libraries" "http://www.x.org/wiki/" TRUE "" "Xorg libraries are used by libqnetwm to bring windows to front reliably")
 endif()
 
-# Check if we can use <functional> or need <tr1/functional>
-include( CheckStdFunctional )
-check_std_functional( CXX_STD_FUNCTIONAL )
-include( CheckStdTr1Functional )
-check_std_tr1_functional( CXX_STD_TR1_FUNCTIONAL )
-if ( NOT CXX_STD_FUNCTIONAL AND NOT CXX_STD_TR1_FUNCTIONAL )
-    message( FATAL_ERROR
-        "Used compiler neither provides std::function nor std::tr1::function")
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag( "-std=c++11" CXX11_FOUND )
+check_cxx_compiler_flag( "-std=c++0x" CXX0X_FOUND )
+check_cxx_compiler_flag( "-stdlib=libc++" LIBCPP_FOUND )
+if(CXX11_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+elseif(CXX0X_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+else()
+    message(STATUS "${CMAKE_CXX_COMPILER} does not support C++11, please use a
+    different compiler")
+endif()
+if(LIBCPP_FOUND AND APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
 macro_optional_find_package(Echonest 2.2.0)
@@ -337,6 +367,9 @@ endif()
     macro_log_feature(LIBSNORE_FOUND "Libsnore" "Library for notifications" "https://github.com/TheOneRing/Snorenotify" FALSE "" "")
 endif()
 
+find_package(LIBVLC REQUIRED 2.1.0)
+macro_log_feature(LIBVLC_FOUND "LibVLC" "Provides audio output" "https://www.videolan.org/vlc/"  TRUE "" "")
+
 set(QXTWEB_FOUND TRUE)
 set(QXTWEB_LIBRARIES qxtweb-standalone)
 set(QXTWEB_INCLUDE_DIRS ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/web ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/network ${THIRDPARTY_DIR}/qxt/qxtweb-standalone/core ${CMAKE_CURRENT_BINARY_DIR})
@@ -368,16 +401,7 @@ if (WITH_KDE4)
 endif(WITH_KDE4)
 macro_log_feature(KDE4_FOUND "KDE4" "Provides support for configuring Telepathy Accounts from inside Tomahawk" "https://www.kde.org" FALSE "" "")
 
-if(NOT Phonon_FOUND)
-  macro_optional_find_package(Phonon 4.5.0)
-endif()
-macro_log_feature(Phonon_FOUND "Phonon" "The Phonon multimedia library" "http://phonon.kde.org" TRUE "" "")
-
-if(Phonon_FOUND)
-    message(STATUS "Phonon found; ensure that phonon-vlc is at least 0.4")
-endif()
-
-IF( KDE4_FOUND OR Phonon_FOUND )
+IF( KDE4_FOUND )
     IF( CMAKE_C_FLAGS )
         # KDE4 adds and removes some compiler flags that we don't like
         # (only for gcc not for clang e.g.)

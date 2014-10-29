@@ -21,29 +21,27 @@
 #define VIEWMANAGER_H
 
 #include "Artist.h"
+#include "ViewPage.h"
+#include "ViewPagePlugin.h"
 #include "collection/Collection.h"
 #include "PlaylistInterface.h"
 #include "playlist/QueueView.h"
-#include "ViewPage.h"
-#include "ViewPagePlugin.h"
 
 #include <QObject>
 #include <QHash>
 #include <QStackedWidget>
 
-// best regards to you, mr. pimple aka xhochy :)
-#include <boost/function.hpp>
-
 #include "DllMacro.h"
 
-class AnimatedSplitter;
+#include <functional>
+
 class AlbumModel;
 class GridView;
 class AlbumInfoWidget;
 class ArtistInfoWidget;
 class CollectionModel;
 class PlaylistViewPage;
-class FlexibleTreeView;
+class CollectionViewPage;
 class PlaylistModel;
 class TrackProxyModel;
 class TrackModel;
@@ -120,7 +118,7 @@ public slots:
     Tomahawk::ViewPage* showInboxPage();
     Tomahawk::ViewPage* showQueuePage();
 
-//    void addDynamicPage( const QString& pageName, const QString& text, const QIcon& icon, boost::function< Tomahawk::ViewPage*() > instanceLoader, int sortValue = 0 );
+//    void addDynamicPage( const QString& pageName, const QString& text, const QIcon& icon, function< Tomahawk::ViewPage*() > instanceLoader, int sortValue = 0 );
     Tomahawk::ViewPage* showDynamicPage( const QString& pageName );
 
     void showCurrentTrack();
@@ -155,7 +153,6 @@ private:
 
     QWidget* m_widget;
     QStackedWidget* m_stack;
-    AnimatedSplitter* m_splitter;
 
     QueueView* m_queue;
     Tomahawk::ViewPage* m_inboxWidget;
@@ -163,10 +160,10 @@ private:
 
     QHash< QString, Tomahawk::ViewPage* > m_dynamicPages;
     QHash< QString, QPointer< Tomahawk::ViewPagePlugin > > m_dynamicPagePlugins;
-    QHash< QString, boost::function< Tomahawk::ViewPage*() > > m_dynamicPagesInstanceLoaders;
+    QHash< QString, std::function< Tomahawk::ViewPage*() > > m_dynamicPagesInstanceLoaders;
 
     QHash< Tomahawk::dynplaylist_ptr, QPointer<Tomahawk::DynamicWidget> > m_dynamicWidgets;
-    QHash< Tomahawk::collection_ptr, QPointer<FlexibleTreeView> > m_collectionViews;
+    QHash< Tomahawk::collection_ptr, QPointer<CollectionViewPage> > m_collectionViews;
     QHash< Tomahawk::artist_ptr, QPointer<ArtistInfoWidget> > m_artistViews;
     QHash< Tomahawk::album_ptr, QPointer<AlbumInfoWidget> > m_albumViews;
     QHash< Tomahawk::query_ptr, QPointer<TrackInfoWidget> > m_trackViews;

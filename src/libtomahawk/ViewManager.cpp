@@ -27,7 +27,6 @@
 #include "audio/AudioEngine.h"
 
 #include "playlist/ContextView.h"
-#include "playlist/FlexibleTreeView.h"
 #include "playlist/TreeModel.h"
 #include "playlist/PlaylistModel.h"
 #include "playlist/TrackView.h"
@@ -42,15 +41,12 @@
 #include "playlist/RecentlyPlayedModel.h"
 #include "playlist/dynamic/widgets/DynamicWidget.h"
 
-#include "resolvers/ScriptCollection.h"
-
 #include "viewpages/PlaylistViewPage.h"
 #include "viewpages/SourceViewPage.h"
 #include "viewpages/ArtistViewPage.h"
 #include "viewpages/AlbumViewPage.h"
 #include "viewpages/TrackViewPage.h"
-
-#include "widgets/AnimatedSplitter.h"
+#include "viewpages/CollectionViewPage.h"
 
 #include "utils/Logger.h"
 #include "utils/TomahawkUtilsGui.h"
@@ -263,31 +259,11 @@ ViewManager::show( const Tomahawk::collection_ptr& collection )
 {
     m_currentCollection = collection;
 
-    FlexibleTreeView* view;
+    CollectionViewPage* view;
     if ( !m_collectionViews.contains( collection ) || m_collectionViews.value( collection ).isNull() )
     {
-        view = new FlexibleTreeView();
-
-        view->columnView()->proxyModel()->setStyle( PlayableProxyModel::Collection );
-        TreeModel* model = new TreeModel();
-        PlayableModel* flatModel = new PlayableModel();
-        PlayableModel* albumModel = new PlayableModel();
-
-        view->setTreeModel( model );
-        view->setFlatModel( flatModel );
-        view->setAlbumModel( albumModel );
-
-        model->addCollection( collection );
-        flatModel->appendTracks( collection );
-        albumModel->appendAlbums( collection );
-
+        view = new CollectionViewPage( collection );
         setPage( view );
-
-        if ( !collection.isNull() )
-            view->setEmptyTip( collection->emptyText() );
-
-        if ( collection.objectCast<ScriptCollection>() )
-            view->trackView()->setEmptyTip( tr( "Cloud collections aren't supported in the flat view yet. We will have them covered soon. Switch to another view to navigate them." ) );
 
         m_collectionViews.insert( collection, view );
     }
@@ -682,7 +658,7 @@ ViewManager::addDynamicPage( Tomahawk::ViewPagePlugin* viewPage, const QString& 
 
 
 /*void
-ViewManager::addDynamicPage( const QString& pageName, const QString& text, const QIcon& icon, boost::function<Tomahawk::ViewPage*()> instanceLoader, int sortValue )
+ViewManager::addDynamicPage( const QString& pageName, const QString& text, const QIcon& icon, function<Tomahawk::ViewPage*()> instanceLoader, int sortValue )
 {
     tLog() << Q_FUNC_INFO << "Trying to add" << pageName;
 
