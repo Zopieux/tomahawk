@@ -33,6 +33,7 @@
 #include "playlist/TrackView.h"
 #include "playlist/PlayableModel.h"
 #include "utils/TomahawkUtilsGui.h"
+#include "utils/TomahawkStyle.h"
 #include "utils/ImageRegistry.h"
 #include "utils/Logger.h"
 #include "widgets/ImageButton.h"
@@ -60,6 +61,7 @@ AudioControls::AudioControls( QWidget* parent )
 {
     ui->setupUi( this );
     setAutoFillBackground( false );
+    BackgroundWidget::setBackgroundColor( TomahawkStyle::HEADER_BACKGROUND );
     setAcceptDrops( true );
     setFixedHeight( scaledY( 85 ) );
 
@@ -185,7 +187,6 @@ AudioControls::AudioControls( QWidget* parent )
 
 AudioControls::~AudioControls()
 {
-    delete ui;
 }
 
 

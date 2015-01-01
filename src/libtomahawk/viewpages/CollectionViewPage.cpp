@@ -28,6 +28,7 @@
 #include "playlist/TreeModel.h"
 #include "playlist/ColumnView.h"
 #include "playlist/TrackView.h"
+#include "playlist/GridItemDelegate.h"
 #include "playlist/GridView.h"
 #include "playlist/PlayableProxyModelPlaylistInterface.h"
 #include "resolvers/ScriptCollection.h"
@@ -37,6 +38,7 @@
 #include "utils/TomahawkUtilsGui.h"
 #include "utils/Closure.h"
 #include "utils/Logger.h"
+#include "MetaPlaylistInterface.h"
 
 using namespace Tomahawk;
 
@@ -50,6 +52,7 @@ CollectionViewPage::CollectionViewPage( const Tomahawk::collection_ptr& collecti
     , m_model( 0 )
     , m_flatModel( 0 )
     , m_albumModel( 0 )
+    , m_playlistInterface( new MetaPlaylistInterface() )
 {
     qRegisterMetaType< CollectionViewPageMode >( "CollectionViewPageMode" );
 
@@ -67,14 +70,14 @@ CollectionViewPage::CollectionViewPage( const Tomahawk::collection_ptr& collecti
         m_albumView->setAutoResize( false );
         m_albumView->setAutoFitItems( true );
         m_albumView->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-        m_albumView->setItemSize( QSize( 170, 170 + 56 ) );
+        m_albumView->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 170 ) );
+        m_albumView->delegate()->setWordWrapping( true );
 
-        m_albumView->proxyModel()->sort( -1 );
         m_albumView->setEmptyTip( tr( "Sorry, there are no albums in this collection!" ) );
 
         TomahawkStyle::stylePageFrame( m_albumView );
 
-        m_albumView->setStyleSheet( QString( "QListView { background-color: white; }" ) );
+        m_albumView->setStyleSheet( QString( "QListView { background-color: %1; }" ).arg( TomahawkStyle::PAGE_BACKGROUND.name() ) );
     }
 
     m_stack = new QStackedWidget();
@@ -112,6 +115,10 @@ CollectionViewPage::CollectionViewPage( const Tomahawk::collection_ptr& collecti
     m_stack->addWidget( m_trackView );
 
     connect( m_header, SIGNAL( filterTextChanged( QString ) ), SLOT( setFilter( QString ) ) );
+
+    m_playlistInterface->addChildInterface( m_trackView->playlistInterface() );
+    m_playlistInterface->addChildInterface( m_albumView->playlistInterface() );
+    m_playlistInterface->addChildInterface( m_columnView->proxyModel()->playlistInterface() );
 
     loadCollection( collection );
 }
@@ -184,6 +191,7 @@ CollectionViewPage::setAlbumModel( PlayableModel* model )
 
     m_albumModel = model;
     m_albumView->setPlayableModel( model );
+    m_albumView->proxyModel()->sort( PlayableModel::Artist, Qt::AscendingOrder );
 
     if ( oldModel )
     {
@@ -264,7 +272,7 @@ CollectionViewPage::setCurrentMode( CollectionViewPageMode mode )
 Tomahawk::playlistinterface_ptr
 CollectionViewPage::playlistInterface() const
 {
-    return m_columnView->proxyModel()->playlistInterface();
+    return m_playlistInterface.objectCast<Tomahawk::PlaylistInterface>();
 }
 
 
@@ -394,14 +402,5 @@ CollectionViewPage::isTemporaryPage() const
 bool
 CollectionViewPage::isBeingPlayed() const
 {
-    if ( !playlistInterface() )
-        return false;
-
-    if ( playlistInterface() == AudioEngine::instance()->currentTrackPlaylist() )
-        return true;
-
-    if ( playlistInterface()->hasChildInterface( AudioEngine::instance()->currentTrackPlaylist() ) )
-        return true;
-
-    return false;
+    return m_playlistInterface->hasChildInterface( AudioEngine::instance()->currentTrackPlaylist() );
 }

@@ -72,6 +72,7 @@ private slots:
 
 private:
     QStringList m_dirs;
+    QSet< QString > m_processedDirs;
 
     uint m_opcount;
     QMutex m_deletingMutex;
@@ -158,6 +159,7 @@ private:
 
     unsigned int m_cmdQueue;
 
+    QSet< QString > m_processedFiles;
     QVariantList m_scannedfiles;
     QVariantList m_filesToDelete;
     quint32 m_batchsize;

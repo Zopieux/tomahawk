@@ -44,6 +44,8 @@
 #include <shlwapi.h>
 #endif
 
+using namespace Tomahawk;
+
 ScriptResolver::ScriptResolver( const QString& exe )
     : Tomahawk::ExternalResolverGui( exe )
     , m_num_restarts( 0 )
@@ -145,7 +147,6 @@ ScriptResolver::sendConfig()
     tDebug() << "Nam proxy is:" << Tomahawk::Utils::nam()->proxyFactory();
     Tomahawk::Utils::nam()->proxyFactory()->queryProxy();
     Tomahawk::Utils::NetworkProxyFactory* factory = dynamic_cast<Tomahawk::Utils::NetworkProxyFactory*>( Tomahawk::Utils::nam()->proxyFactory() );
-    tDebug() << "Factory is:" << factory;
     QNetworkProxy proxy = factory->proxy();
     QString proxyType = ( proxy.type() == QNetworkProxy::Socks5Proxy ? "socks5" : "none" );
     m.insert( "proxytype", proxyType );
@@ -289,7 +290,14 @@ ScriptResolver::handleMsg( const QByteArray& msg )
             QVariantMap m = rv.toMap();
             tDebug( LOGVERBOSE ) << "Found result:" << m;
 
-            Tomahawk::track_ptr track = Tomahawk::Track::get( m.value( "artist" ).toString(), m.value( "track" ).toString(), m.value( "album" ).toString(), m.value( "duration" ).toUInt(), QString(), m.value( "albumpos" ).toUInt(), m.value( "discnumber" ).toUInt() );
+            Tomahawk::track_ptr track = Tomahawk::Track::get( m.value( "artist" ).toString(),
+                                                              m.value( "track" ).toString(),
+                                                              m.value( "album" ).toString(),
+                                                              m.value( "albumartist" ).toString(),
+                                                              m.value( "duration" ).toUInt(),
+                                                              QString(),
+                                                              m.value( "albumpos" ).toUInt(),
+                                                              m.value( "discnumber" ).toUInt() );
             if ( !track )
                 continue;
 

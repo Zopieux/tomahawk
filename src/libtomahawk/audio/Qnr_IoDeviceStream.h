@@ -26,6 +26,7 @@
 #include "DllMacro.h"
 
 #include <QByteArray>
+#include <QMutex>
 #include <QNetworkReply>
 #include <QSharedPointer>
 
@@ -42,7 +43,7 @@ class DLLEXPORT QNR_IODeviceStream : public MediaStream
     Q_OBJECT
 
 public:
-    explicit QNR_IODeviceStream( const QSharedPointer<QNetworkReply>& reply, QObject *parent = 0 );
+    explicit QNR_IODeviceStream( const QSharedPointer<QNetworkReply>& reply, QObject *parent = nullptr );
     ~QNR_IODeviceStream();
 
     virtual void seekStream( qint64 offset );
@@ -52,6 +53,7 @@ private slots:
     void readyRead();
 
 private:
+    QMutex m_mutex;
     QByteArray m_data;
     QSharedPointer<QNetworkReply> m_networkReply;
     QTimer* m_timer;

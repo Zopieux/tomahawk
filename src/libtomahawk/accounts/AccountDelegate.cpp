@@ -52,7 +52,7 @@ using namespace Accounts;
 AccountDelegate::AccountDelegate( QObject* parent )
     : QStyledItemDelegate ( parent )
     , m_accountRowHeight( -1 )
-    , m_model( 0 )
+    , m_model( nullptr )
 {
 }
 
@@ -108,13 +108,12 @@ AccountDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, 
 
     painter->setRenderHint( QPainter::Antialiasing );
 
-    if ( m_model == 0 || m_model != index.model() )
+    if ( m_model == nullptr || m_model != index.model() )
         m_model = const_cast<QAbstractItemModel*>( index.model() );
 
     QFont titleFont = opt.font;
     titleFont.setBold( true );
     titleFont.setPointSize( titleFont.pointSize() + 2 );
-    const QFontMetrics titleMetrics( titleFont );
 
     QFont authorFont = opt.font;
     authorFont.setItalic( true );
@@ -126,7 +125,6 @@ AccountDelegate::paint ( QPainter* painter, const QStyleOptionViewItem& option, 
 
     QFont descFont = authorFont;
     descFont.setItalic( false );
-    const QFontMetrics descMetrics( descFont );
 
     QFont installFont = opt.font;
     installFont.setPointSize( installFont.pointSize() - 1 );

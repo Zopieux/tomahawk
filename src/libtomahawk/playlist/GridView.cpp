@@ -36,6 +36,7 @@
 #include "utils/AnimatedSpinner.h"
 #include "utils/PixmapDelegateFader.h"
 #include "utils/TomahawkUtilsGui.h"
+#include "utils/TomahawkStyle.h"
 
 #include <QDrag>
 #include <QHeaderView>
@@ -59,6 +60,7 @@ GridView::GridView( QWidget* parent )
     , m_overlay( new OverlayWidget( this ) )
     , m_contextMenu( new ContextMenu( this ) )
     , m_inited( false )
+    , m_itemWidth( 0 )
 {
     setFrameShape( QFrame::NoFrame );
     setAttribute( Qt::WA_MacShowFocusRect, 0 );
@@ -76,12 +78,12 @@ GridView::GridView( QWidget* parent )
     setVerticalScrollMode( QAbstractItemView::ScrollPerPixel );
     setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOn );
 
-    setStyleSheet( "QListView { background-color: #ffffff; }" );
+    setStyleSheet( QString( "QListView { background-color: %1; }" ).arg( TomahawkStyle::PAGE_BACKGROUND.name() ) );
 
     setAutoFitItems( true );
     setAutoResize( false );
 
-    setItemSize( TomahawkUtils::DpiScaler::scaled( this, QSize( 170, 170 + 56 ) ) );
+    setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 170 ) );
     setProxyModel( new PlayableProxyModel( this ) );
 
     m_timer.setInterval( SCROLL_TIMEOUT );
@@ -129,7 +131,7 @@ GridView::setProxyModel( PlayableProxyModel* model )
     m_delegate = new GridItemDelegate( this, m_proxyModel );
     connect( m_delegate, SIGNAL( startedPlaying( QPersistentModelIndex ) ), this, SLOT( onDelegatePlaying( QPersistentModelIndex ) ) );
     connect( m_delegate, SIGNAL( stoppedPlaying( QPersistentModelIndex ) ), this, SLOT( onDelegateStopped( QPersistentModelIndex ) ) );
-    m_delegate->setItemSize( m_itemSize );
+    m_delegate->setItemWidth( m_itemWidth );
     setItemDelegate( m_delegate );
 
     QListView::setModel( m_proxyModel );
@@ -289,7 +291,7 @@ GridView::verifySize()
         scrollbar = 0; //don't count it any more
 
     const int rectWidth = contentsRect().width() - scrollbar - 3 - spacing();
-    const int itemWidth = m_itemSize.width() + spacing();
+    const int itemWidth = m_itemWidth + spacing();
     const int itemsPerRow = qMax( 1, qFloor( rectWidth / itemWidth ) );
 
     const int overlapRows = m_model->rowCount( QModelIndex() ) % itemsPerRow;
@@ -322,14 +324,14 @@ GridView::layoutItems()
             scrollbar = 0; //don't count it any more
 
         const int rectWidth = contentsRect().width() - scrollbar - 3 - spacing();
-        const int itemWidth = m_itemSize.width() + spacing();
+        const int itemWidth = m_itemWidth + spacing();
         const int itemsPerRow = qMax( 1, qFloor( rectWidth / itemWidth ) );
 
         const int remSpace = rectWidth - ( itemsPerRow * itemWidth );
         const int extraSpace = remSpace / itemsPerRow;
         const int newItemWidth = itemWidth + extraSpace - spacing();
 
-        m_delegate->setItemSize( QSize( newItemWidth, newItemWidth + ( m_itemSize.height() - m_itemSize.width() ) ) );
+        m_delegate->setItemWidth( newItemWidth );
     }
 
     verifySize();
@@ -495,12 +497,19 @@ GridView::setPlaylistInterface( const Tomahawk::playlistinterface_ptr& playlistI
 }
 
 
-void
-GridView::setItemSize( const QSize& size )
+QSize
+GridView::itemSize() const
 {
-    m_itemSize = size;
+    return m_delegate->itemSize();
+}
+
+
+void
+GridView::setItemWidth( int width )
+{
+    m_itemWidth = width;
     if ( m_delegate )
-        m_delegate->setItemSize( m_itemSize );
+        m_delegate->setItemWidth( m_itemWidth );
 
     layoutItems();
 }

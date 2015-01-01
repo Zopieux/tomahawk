@@ -2,6 +2,7 @@
  *
  *   Copyright 2010-2011, Leo Franchi <lfranchi@kde.org>
  *   Copyright 2013,      Teo Mrnjavac <teo@kde.org>
+ *   Copyright 2014,      Uwe L. Korn <uwelk@xhochy.com>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -109,15 +110,13 @@ ResolverAccountFactory::createFromPath( const QString& path, const QString& fact
                                                            MANUALRESOLVERS_DIR ) );
             if ( !( dir.exists() && dir.isReadable() ) ) //decompression fubar
             {
-                JobStatusView::instance()->model()->addJob( new ErrorStatusMessage(
-                                        tr( "Resolver installation error: cannot open bundle." ) ) );
+                displayError( tr( "Resolver installation error: cannot open bundle." ) );
                 return 0;
             }
 
             if ( !dir.cd( "content" ) ) //more fubar
             {
-                JobStatusView::instance()->model()->addJob( new ErrorStatusMessage(
-                                        tr( "Resolver installation error: incomplete bundle." ) ) );
+                displayError( tr( "Resolver installation error: incomplete bundle." ) );
                 return 0;
             }
 
@@ -155,8 +154,7 @@ ResolverAccountFactory::createFromPath( const QString& path, const QString& fact
             realPath = configuration[ "path" ].toString();
             if ( realPath.isEmpty() )
             {
-                JobStatusView::instance()->model()->addJob( new ErrorStatusMessage(
-                                        tr( "Resolver installation error: bad metadata in bundle." ) ) );
+                displayError( tr( "Resolver installation error: bad metadata in bundle." ) );
                 return 0;
             }
         }
@@ -192,9 +190,7 @@ ResolverAccountFactory::createFromPath( const QString& path, const QString& fact
 
             if ( !myPlatform.contains( platform ) )
             {
-                tDebug() << "Wrong resolver platform.";
-                JobStatusView::instance()->model()->addJob( new ErrorStatusMessage(
-                                        tr( "Resolver installation error: platform mismatch." ) ) );
+                displayError( tr( "Resolver installation error: platform mismatch." ) );
                 return 0;
             }
         }
@@ -206,9 +202,8 @@ ResolverAccountFactory::createFromPath( const QString& path, const QString& fact
 
             if ( TomahawkUtils::compareVersionStrings( thVer, requiredVer ) < 0 )
             {
-                JobStatusView::instance()->model()->addJob( new ErrorStatusMessage(
-                                        tr( "Resolver installation error: Tomahawk %1 or newer is required." )
-                                        .arg( requiredVer ) ) );
+                displayError( tr( "Resolver installation error: Tomahawk %1 or newer is required." )
+                              .arg( requiredVer ) );
                 return 0;
             }
         }
@@ -282,6 +277,14 @@ ResolverAccountFactory::expandPaths( const QDir& contentDir, QVariantHash& confi
 }
 
 
+void
+ResolverAccountFactory::displayError( const QString& error )
+{
+    tLog() << "Resolver creation FAILED:" << error;
+    JobStatusView::instance()->model()->addJob( new ErrorStatusMessage( error ) );
+}
+
+
 ResolverAccount::ResolverAccount( const QString& accountId )
     : Account( accountId )
 {
@@ -318,7 +321,7 @@ ResolverAccount::~ResolverAccount()
     if ( m_resolver.isNull() )
         return;
 
-    Pipeline::instance()->removeScriptResolver( m_resolver.data()->filePath() );
+    Pipeline::instance()->removeScriptResolver( m_resolver->filePath() );
     delete m_resolver.data();
 }
 
@@ -368,8 +371,8 @@ ResolverAccount::authenticate()
 
     tDebug() << Q_FUNC_INFO << "Authenticating/starting resolver, exists?" << m_resolver.data()->name();
 
-    if ( !m_resolver.data()->running() )
-        m_resolver.data()->start();
+    if ( !m_resolver->running() )
+        m_resolver->start();
 
     emit connectionStateChanged( connectionState() );
 }
@@ -378,14 +381,14 @@ ResolverAccount::authenticate()
 bool
 ResolverAccount::isAuthenticated() const
 {
-    return !m_resolver.isNull() && m_resolver.data()->running();
+    return !m_resolver.isNull() && m_resolver->running();
 }
 
 
 void
 ResolverAccount::deauthenticate()
 {
-    if ( !m_resolver.isNull() && m_resolver.data()->running() )
+    if ( !m_resolver.isNull() && m_resolver->running() )
         m_resolver.data()->stop();
 
     emit connectionStateChanged( connectionState() );
@@ -396,7 +399,7 @@ ResolverAccount::deauthenticate()
 Account::ConnectionState
 ResolverAccount::connectionState() const
 {
-    if ( !m_resolver.isNull() && m_resolver.data()->running() )
+    if ( !m_resolver.isNull() && m_resolver->running() )
         return Connected;
     else
         return Disconnected;
@@ -452,7 +455,7 @@ ResolverAccount::path() const
 void
 ResolverAccount::resolverChanged()
 {
-    setAccountFriendlyName( m_resolver.data()->name() );
+    setAccountFriendlyName( m_resolver->name() );
     emit connectionStateChanged( connectionState() );
 }
 
@@ -463,7 +466,7 @@ ResolverAccount::icon() const
     if ( m_resolver.isNull() )
         return QPixmap();
 
-    return m_resolver.data()->icon();
+    return m_resolver->icon();
 }
 
 

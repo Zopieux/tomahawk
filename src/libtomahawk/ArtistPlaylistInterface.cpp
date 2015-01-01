@@ -1,6 +1,6 @@
 /* === This file is part of Tomahawk Player - <http://tomahawk-player.org> ===
  *
- *   Copyright 2010-2011, Christian Muehlhaeuser <muesli@tomahawk-player.org>
+ *   Copyright 2010-2014, Christian Muehlhaeuser <muesli@tomahawk-player.org>
  *   Copyright 2010-2011, Jeff Mitchell <jeff@tomahawk-player.org>
  *
  *   Tomahawk is free software: you can redistribute it and/or modify
@@ -53,9 +53,12 @@ ArtistPlaylistInterface::~ArtistPlaylistInterface()
 void
 ArtistPlaylistInterface::setCurrentIndex( qint64 index )
 {
-    PlaylistInterface::setCurrentIndex( index );
-
-    m_currentItem = m_queries.at( index )->results().first();
+    if ( index >= 0 && index < m_queries.size() &&
+        !m_queries.at( index ).isNull() && m_queries.at( index )->results().size() > 0 )
+    {
+        PlaylistInterface::setCurrentIndex( index );
+        m_currentItem = m_queries.at( index )->results().first();
+    }
 }
 
 
@@ -155,14 +158,13 @@ ArtistPlaylistInterface::infoSystemInfo( Tomahawk::InfoSystem::InfoRequestData r
 
                 foreach ( const QString& trackName, tracks )
                 {
-                    track_ptr track = Track::get( inputInfo[ "artist" ], trackName, inputInfo[ "album" ], 0, QString(), trackNo++ );
+                    track_ptr track = Track::get( inputInfo[ "artist" ], trackName, inputInfo[ "album" ], QString(), 0, QString(), trackNo++ );
                     query_ptr query = Query::get( track );
                     if ( query )
                         ql << query;
                 }
 
                 m_queries << ql;
-                checkQueries();
             }
 
             break;
@@ -207,7 +209,7 @@ ArtistPlaylistInterface::infoSystemFinished( const QString &infoId )
     }
     else
     {
-        m_finished = true;
+        finishLoading();
         emit tracksLoaded( m_mode, m_collection );
     }
 }
@@ -224,9 +226,7 @@ ArtistPlaylistInterface::onTracksLoaded( const QList< query_ptr >& tracks )
     else
         m_queries << tracks;
 
-    checkQueries();
-
-    m_finished = true;
+    finishLoading();
     emit tracksLoaded( m_mode, m_collection );
 }
 
@@ -283,14 +283,4 @@ ArtistPlaylistInterface::resultAt( qint64 index ) const
         return query->results().first();
 
     return Tomahawk::result_ptr();
-}
-
-
-void
-ArtistPlaylistInterface::checkQueries()
-{
-    foreach ( const Tomahawk::query_ptr& query, m_queries )
-    {
-        connect( query.data(), SIGNAL( playableStateChanged( bool ) ), SLOT( onItemsChanged() ), Qt::UniqueConnection );
-    }
 }

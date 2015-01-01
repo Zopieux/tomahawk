@@ -28,6 +28,7 @@
 #include "playlist/TrackView.h"
 #include "playlist/PlayableModel.h"
 #include "playlist/PlaylistModel.h"
+#include "playlist/GridItemDelegate.h"
 #include "utils/AnimatedSpinner.h"
 #include "utils/TomahawkStyle.h"
 #include "utils/TomahawkUtilsGui.h"
@@ -55,8 +56,8 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
         ui->artists->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->artists->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->artists->setWrapping( false );
-        ui->artists->setItemSize( QSize( 140, 140 + 38 ) );
-        ui->artists->setFixedHeight( 140 + 32 + 38 );
+        ui->artists->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 140 ) );
+        ui->artists->setFixedHeight( ui->artists->itemSize().height() + ui->artists->spacing() * 2 );
 
         m_artistsModel = new PlayableModel( ui->artists );
         ui->artists->setPlayableModel( m_artistsModel );
@@ -74,16 +75,17 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
         ui->albums->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->albums->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->albums->setWrapping( false );
-        ui->albums->setItemSize( QSize( 140, 140 + 56 ) );
+        ui->albums->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 140 ) );
 //        ui->albums->proxyModel()->setHideDupeItems( true );
-        ui->albums->setFixedHeight( 140 + 56 + 38 );
+        ui->albums->delegate()->setWordWrapping( true );
+        ui->albums->setFixedHeight( ui->albums->itemSize().height() + ui->albums->spacing() * 2 );
 
         m_albumsModel = new PlayableModel( ui->albums );
         ui->albums->setPlayableModel( m_albumsModel );
         ui->albums->proxyModel()->sort( -1 );
         ui->albums->setEmptyTip( tr( "Sorry, we could not find any albums!" ) );
 
-        ui->albums->setStyleSheet( QString( "QListView { background-color: white; }" ) );
+        ui->albums->setStyleSheet( QString( "QListView { background-color: %1; }" ).arg( TomahawkStyle::PAGE_BACKGROUND.name() ) );
         TomahawkStyle::stylePageFrame( ui->albumFrame );
         TomahawkStyle::styleScrollBar( ui->albums->verticalScrollBar() );
         TomahawkStyle::styleScrollBar( ui->albums->horizontalScrollBar() );
@@ -95,16 +97,17 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
         ui->tracks->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->tracks->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->tracks->setWrapping( false );
-        ui->tracks->setItemSize( QSize( 140, 140 + 56 ) );
+        ui->tracks->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 140 ) );
 //        ui->tracks->proxyModel()->setHideDupeItems( true );
-        ui->tracks->setFixedHeight( 140 + 56 + 38 );
+        ui->tracks->delegate()->setWordWrapping( true );
+        ui->tracks->setFixedHeight( ui->tracks->itemSize().height() + ui->tracks->spacing() * 2 );
 
         m_resultsModel = new PlayableModel( ui->tracks );
         ui->tracks->setPlayableModel( m_resultsModel );
         ui->tracks->proxyModel()->sort( -1 );
         ui->tracks->setEmptyTip( tr( "Sorry, we could not find any songs!" ) );
 
-        ui->tracks->setStyleSheet( QString( "QListView { background-color: white; }" ) );
+        ui->tracks->setStyleSheet( QString( "QListView { background-color: %1; }" ).arg( TomahawkStyle::PAGE_BACKGROUND.name() ) );
         TomahawkStyle::stylePageFrame( ui->trackFrame );
     }
 
@@ -130,7 +133,7 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
         area->setWidget( widget );
 
         QPalette pal = palette();
-        pal.setBrush( backgroundRole(), Qt::white );
+        pal.setBrush( backgroundRole(), TomahawkStyle::PAGE_BACKGROUND );
         area->setPalette( pal );
         area->setAutoFillBackground( true );
         area->setFrameShape( QFrame::NoFrame );
@@ -157,7 +160,7 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
 
         QWidget* vbox = new QWidget;
         QPalette pal = vbox->palette();
-        pal.setBrush( vbox->backgroundRole(), Qt::white );
+        pal.setBrush( vbox->backgroundRole(), TomahawkStyle::PAGE_BACKGROUND );
         vbox->setPalette( pal );
         vbox->setAutoFillBackground( true );
 
@@ -179,6 +182,7 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
     {
         GridView* albumsFullView = new GridView( m_stackedWidget );
         albumsFullView->setPlayableModel( m_albumsModel );
+        albumsFullView->delegate()->setWordWrapping( true );
 
         CaptionLabel* captionLabel = new CaptionLabel( this );
         captionLabel->setText( tr( "Albums" ) );
@@ -186,7 +190,7 @@ SearchWidget::SearchWidget( const QString& search, QWidget* parent )
 
         QWidget* vbox = new QWidget;
         QPalette pal = vbox->palette();
-        pal.setBrush( vbox->backgroundRole(), Qt::white );
+        pal.setBrush( vbox->backgroundRole(), TomahawkStyle::PAGE_BACKGROUND );
         vbox->setPalette( pal );
         vbox->setAutoFillBackground( true );
 
@@ -331,6 +335,8 @@ SearchWidget::onResultsFound( const QList<Tomahawk::result_ptr>& results )
     while ( queries.count() )
     {
         query_ptr q = queries.takeFirst();
+        if ( !q->results().count() )
+            continue;
 
         bool done = false;
         for ( int i = 0; i < m_resultsModel->rowCount( QModelIndex() ); i++ )

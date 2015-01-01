@@ -67,9 +67,11 @@ ChartsWidget::ChartsWidget( QWidget* parent )
     ui->breadCrumbLeft->setRootIcon( TomahawkUtils::defaultPixmap( TomahawkUtils::Charts, TomahawkUtils::Original ) );
     connect( ui->breadCrumbLeft, SIGNAL( activateIndex( QModelIndex ) ), SLOT( leftCrumbIndexChanged( QModelIndex ) ) );
 
-    ui->artistsView->setItemSize( TomahawkUtils::DpiScaler::scaled( this, QSize( 190, 190 + 38 ) ) );
-    ui->albumsView->setItemSize( TomahawkUtils::DpiScaler::scaled( this, QSize( 190, 190 + 56 ) ) );
-    ui->tracksView->setItemSize( TomahawkUtils::DpiScaler::scaled( this, QSize( 190, 190 + 56 ) ) );
+    ui->artistsView->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 190 ) );
+    ui->albumsView->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 190 ) );
+    ui->tracksView->setItemWidth( TomahawkUtils::DpiScaler::scaledX( this, 190 ) );
+    ui->albumsView->delegate()->setWordWrapping( true );
+    ui->tracksView->delegate()->setWordWrapping( true );
     ui->artistsView->delegate()->setShowPosition( true );
     ui->albumsView->delegate()->setShowPosition( true );
     ui->tracksView->delegate()->setShowPosition( true );

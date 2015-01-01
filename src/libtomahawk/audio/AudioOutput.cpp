@@ -21,7 +21,9 @@
 
 #include "AudioEngine.h"
 #include "AudioOutput.h"
+#include "TomahawkVersion.h"
 
+#include "audio/MediaStream.h"
 #include "utils/Logger.h"
 
 #include <QApplication>
@@ -90,6 +92,12 @@ AudioOutput::AudioOutput( QObject* parent )
     if ( !m_vlcInstance ) {
         tDebug() << "libVLC: could not initialize";
     }
+    libvlc_set_user_agent( m_vlcInstance, TOMAHAWK_APPLICATION_NAME,
+                           TOMAHAWK_APPLICATION_NAME "/" TOMAHAWK_VERSION );
+    // FIXME: icon is named tomahawk, so we need the lowercase application name
+    libvlc_set_app_id( m_vlcInstance, "org.tomahawk-player.desktop",
+                       TOMAHAWK_VERSION, "tomahawk" );
+
 
 
     m_vlcPlayer = libvlc_media_player_new( m_vlcInstance );
@@ -162,6 +170,21 @@ void
 AudioOutput::setCurrentSource( QIODevice* stream )
 {
     setCurrentSource( new MediaStream( stream ) );
+}
+
+
+int readCallback ( void* data, const char* cookie, int64_t* dts, int64_t* pts, unsigned* flags, size_t* bufferSize, void** buffer )
+{
+    MediaStream* mediaStream = static_cast< MediaStream * >( data );
+    return mediaStream->readCallback( cookie, dts, pts, flags, bufferSize, buffer );
+}
+
+
+int
+readDoneCallback ( void *data, const char *cookie, size_t bufferSize, void *buffer )
+{
+    MediaStream* mediaStream = static_cast< MediaStream * >( data );
+    return mediaStream->readDoneCallback( cookie, bufferSize, buffer );
 }
 
 
@@ -240,9 +263,9 @@ AudioOutput::setCurrentSource( MediaStream* stream )
         libvlc_media_add_option_flag(m_vlcMedia, "imem-cat=4", libvlc_media_option_trusted);
         const char* imemData = QString( "imem-data=%1" ).arg( (uintptr_t)stream ).toLatin1().constData();
         libvlc_media_add_option_flag(m_vlcMedia, imemData, libvlc_media_option_trusted);
-        const char* imemGet = QString( "imem-get=%1" ).arg( (uintptr_t)&MediaStream::readCallback ).toLatin1().constData();
+        const char* imemGet = QString( "imem-get=%1" ).arg( (uintptr_t)&readCallback ).toLatin1().constData();
         libvlc_media_add_option_flag(m_vlcMedia, imemGet, libvlc_media_option_trusted);
-        const char* imemRelease = QString( "imem-release=%1" ).arg( (uintptr_t)&MediaStream::readDoneCallback ).toLatin1().constData();
+        const char* imemRelease = QString( "imem-release=%1" ).arg( (uintptr_t)&readDoneCallback ).toLatin1().constData();
         libvlc_media_add_option_flag(m_vlcMedia, imemRelease, libvlc_media_option_trusted);
         const char* imemSeek = QString( "imem-seek=%1" ).arg( (uintptr_t)&MediaStream::seekCallback ).toLatin1().constData();
         libvlc_media_add_option_flag(m_vlcMedia, imemSeek, libvlc_media_option_trusted);
@@ -520,4 +543,11 @@ void
 AudioOutput::setDspCallback( std::function< void( int, int, float*, int, int ) > cb )
 {
     dspPluginCallback = cb;
+}
+
+
+libvlc_instance_t*
+AudioOutput::vlcInstance() const
+{
+    return m_vlcInstance;
 }

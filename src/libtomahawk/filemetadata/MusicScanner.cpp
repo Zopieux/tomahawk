@@ -61,9 +61,9 @@ DirLister::scanDir( QDir dir, int depth )
     }
 
     tDebug( LOGVERBOSE ) << "DirLister::scanDir scanning:" << dir.canonicalPath();
-    if ( !dir.exists() )
+    if ( !dir.exists() || m_processedDirs.contains( dir.canonicalPath() ) )
     {
-        tDebug( LOGVERBOSE ) << "Dir no longer exists, not scanning";
+        tDebug( LOGVERBOSE ) << "Dir no longer exists or already scanned, ignoring";
 
         m_opcount--;
         if ( m_opcount == 0 )
@@ -72,18 +72,17 @@ DirLister::scanDir( QDir dir, int depth )
         return;
     }
 
-    QFileInfoList filteredEntries;
+    m_processedDirs << dir.canonicalPath();
 
+    QFileInfoList filteredEntries;
     dir.setFilter( QDir::Files | QDir::Readable | QDir::NoDotAndDotDot );
     dir.setSorting( QDir::Name );
     filteredEntries = dir.entryInfoList();
-
     foreach ( const QFileInfo& di, filteredEntries )
         emit fileToScan( di );
 
     dir.setFilter( QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot );
     filteredEntries = dir.entryInfoList();
-
     foreach ( const QFileInfo& di, filteredEntries )
     {
         const QString canonical = di.canonicalFilePath();
@@ -286,6 +285,8 @@ MusicScanner::postOps()
         m_filesToDelete.clear();
     }
 
+    m_processedFiles.clear();
+
     if ( !m_cmdQueue )
         cleanup();
 }
@@ -348,6 +349,13 @@ MusicScanner::commandFinished()
 void
 MusicScanner::scanFile( const QFileInfo& fi )
 {
+    // Don't process a single file twice, this might happen if you add a subfolder of another collection folder to your collection
+    if ( m_processedFiles.contains( fi.canonicalFilePath() ) )
+        return;
+    else
+        m_processedFiles << fi.canonicalFilePath();
+
+
     if ( m_filemtimes.contains( "file://" + fi.canonicalFilePath() ) )
     {
         if ( !m_filemtimes.value( "file://" + fi.canonicalFilePath() ).values().isEmpty() &&
@@ -386,11 +394,11 @@ MusicScanner::readTags( const QFileInfo& fi )
     if ( !TomahawkUtils::supportedExtensions().contains( suffix ) )
         return QVariantMap(); // invalid extension
 
-    #ifdef COMPLEX_TAGLIB_FILENAME
-        const wchar_t *encodedName = fi.canonicalFilePath().toStdWString().c_str();
+    #ifdef Q_OS_WIN
+        const wchar_t* encodedName = fi.canonicalFilePath().toStdWString().c_str();
     #else
         QByteArray fileName = QFile::encodeName( fi.canonicalFilePath() );
-        const char *encodedName = fileName.constData();
+        const char* encodedName = fileName.constData();
     #endif
 
     TagLib::FileRef f( encodedName );
@@ -400,6 +408,9 @@ MusicScanner::readTags( const QFileInfo& fi )
     int bitrate = 0;
     int duration = 0;
     QSharedPointer<Tag> tag( Tag::fromFile( f ) );
+    if ( !tag )
+        return QVariantMap();
+
     if ( f.audioProperties() )
     {
         TagLib::AudioProperties *properties = f.audioProperties();
@@ -407,18 +418,14 @@ MusicScanner::readTags( const QFileInfo& fi )
         bitrate = properties->bitrate();
     }
 
-    QString artist, album, track;
-    if ( tag )
-    {
-        artist = tag->artist().trimmed();
-        album  = tag->album().trimmed();
-        track  = tag->title().trimmed();
-    }
-    if ( !tag || artist.isEmpty() || track.isEmpty() )
+    const QString artist = tag->artist().trimmed();
+    const QString album  = tag->album().trimmed();
+    const QString track  = tag->title().trimmed();
+    if ( artist.isEmpty() || track.isEmpty() )
         return QVariantMap();
 
-    QString mimetype = TomahawkUtils::extensionToMimetype( suffix );
-    QString url( "file://%1" );
+    const QString mimetype = TomahawkUtils::extensionToMimetype( suffix );
+    const QString url( "file://%1" );
 
     QVariantMap m;
     m["url"]          = url.arg( fi.canonicalFilePath() );

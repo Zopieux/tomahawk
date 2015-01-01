@@ -46,12 +46,13 @@ Q_OBJECT
 public:
     GridItemDelegate( QAbstractItemView* parent, PlayableProxyModel* proxy );
 
-    QSize itemSize() const { return m_itemSize; }
-    void setItemSize( const QSize& size ) { m_itemSize = size; }
+    QSize itemSize() const;
+    void setItemWidth( int width ) { m_itemWidth = width; }
 
 public slots:
     void resetHoverIndex();
     void setShowPosition( bool enabled );
+    void setWordWrapping( bool enabled );
 
 protected:
     void paint( QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index ) const;
@@ -87,8 +88,9 @@ private:
 
     QAbstractItemView* m_view;
     PlayableProxyModel* m_model;
-    QSize m_itemSize;
+    int m_itemWidth;
     bool m_showPosition;
+    bool m_wordWrapping;
 
     mutable QHash< QPersistentModelIndex, QRect > m_artistNameRects;
     mutable QHash< QPersistentModelIndex, QRect > m_albumNameRects;
@@ -102,6 +104,8 @@ private:
     mutable QHash< QPersistentModelIndex, HoverControls* > m_hoverControls;
     mutable QHash< QPersistentModelIndex, QTimeLine* > m_hoverFaders;
 
+    QFont m_font;
+    QFont m_smallFont;
     const int m_margin;
 };
 

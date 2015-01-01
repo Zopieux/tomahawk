@@ -65,7 +65,7 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         ui->relatedArtists->setAutoFitItems( true );
         ui->relatedArtists->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->relatedArtists->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
-        ui->relatedArtists->setItemSize( scaled( QSize( 170, 170 + 38 ) ) );
+        ui->relatedArtists->setItemWidth( scaledX( 170 ) );
 
         m_relatedModel = new PlayableModel( ui->relatedArtists );
         ui->relatedArtists->setPlayableModel( m_relatedModel );
@@ -83,9 +83,10 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         ui->albums->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->albums->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->albums->setWrapping( false );
-        ui->albums->setItemSize( scaled( QSize( 190, 190 + 56 ) ) );
+        ui->albums->setItemWidth( scaledX( 190 ) );
         ui->albums->proxyModel()->setHideDupeItems( true );
-        ui->albums->setFixedHeight( scaledY( 190 + 56 + 38 ) );
+        ui->albums->delegate()->setWordWrapping( true );
+        ui->albums->setFixedHeight( ui->albums->itemSize().height() + ui->albums->spacing() * 2 );
 
         m_albumsModel = new PlayableModel( ui->albums );
         ui->albums->setPlayableModel( m_albumsModel );
@@ -103,9 +104,10 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         ui->topHits->setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->topHits->setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
         ui->topHits->setWrapping( false );
-        ui->topHits->setItemSize( scaled( QSize( 140, 140 + 56 ) ) );
+        ui->topHits->setItemWidth( scaledX( 140 ) );
         ui->topHits->proxyModel()->setHideDupeItems( true );
-        ui->topHits->setFixedHeight( scaledY( 140 + 56 + 38 ) );
+        ui->topHits->delegate()->setWordWrapping( true );
+        ui->topHits->setFixedHeight( ui->topHits->itemSize().height() + ui->topHits->spacing() * 2 );
 
         m_topHitsModel = new PlayableModel( ui->topHits );
         ui->topHits->setPlayableModel( m_topHitsModel );
@@ -168,7 +170,7 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
         m_area->setWidget( m_widget );
 
         QPalette pal = palette();
-        pal.setBrush( backgroundRole(), Qt::white );
+        pal.setBrush( backgroundRole(), TomahawkStyle::PAGE_BACKGROUND );
         m_area->setPalette( pal );
         m_area->setAutoFillBackground( true );
         m_area->setFrameShape( QFrame::NoFrame );
@@ -189,6 +191,7 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
     }
     {
         GridView* albumsFullView = new GridView( m_stackedWidget );
+        albumsFullView->delegate()->setWordWrapping( true );
         //        albumsFullView->setCaption( tr( "Albums" ) );
         //        albumsFullView->setShowCloseButton( true );
         albumsFullView->setPlayableModel( m_albumsModel );
@@ -200,7 +203,7 @@ ArtistInfoWidget::ArtistInfoWidget( const Tomahawk::artist_ptr& artist, QWidget*
 
         QWidget* vbox = new QWidget;
         QPalette pal = vbox->palette();
-        pal.setBrush( vbox->backgroundRole(), Qt::white );
+        pal.setBrush( vbox->backgroundRole(), TomahawkStyle::PAGE_BACKGROUND );
         vbox->setPalette( pal );
         vbox->setAutoFillBackground( true );
 
@@ -377,7 +380,7 @@ ArtistInfoWidget::onBiographyLoaded()
 
     QString html =
         QString( "<html><head><style type=text/css>"
-                 "body { margin: 0; padding: 0; color: #333333; font-family: Roboto; font-size: %1pt; font-weight: normal; }"
+                 "body { margin: 0; padding: 0; color: #333333; background-color: #f9f9f9; font-family: Roboto; font-size: %1pt; font-weight: normal; }"
                     "a { color: #000000; text-decoration: none; font-weight: bold; }"
                     "a:hover { color: #000000; text-decoration: underline; font-weight: bold; }"
                  "</style></head>"

@@ -41,14 +41,24 @@ SET( TOMAHAWK_VERSION_MINOR 8 )
 SET( TOMAHAWK_VERSION_PATCH 99 )
 SET( TOMAHAWK_VERSION_RC 0 )
 
-SET( TOMAHAWK_TRANSLATION_LANGUAGES ar bg bn_IN ca cs de en el es fi fr hi_IN hu gl it ja lt pl pt_BR ro ru sv tr zh_CN zh_TW )
+SET( TOMAHAWK_TRANSLATION_LANGUAGES ar bg bn_IN ca cs da de en el es es_419 fi fr hi_IN hu gl id it ja lt nl pl pt_BR pt_PT ro ru sq sv th tr uk vi zh_CN zh_TW )
 
 # add_definitions is only in the scope of this directory and all directories
 # below it. Tomahawk Libraries and plugins that are built with Tomahawk are
 # not included in out-of-source build so we need to re-add_definitions there.
 macro(tomahawk_add_definitions DEFINITION)
     add_definitions( ${DEFINITION} )
-    list(APPEND TOMAHAWK_DEFINITIONS ${DEFINITION})
+    set( TOMAHAWK_DEFINITIONS "${TOMAHAWK_DEFINITIONS} ${DEFINITION}")
+endmacro()
+
+macro(tomahawk_add_cxx_flags FLAGS)
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FLAGS}")
+    set( TOMAHAWK_CXX_FLAGS "${TOMAHAWK_CXX_FLAGS} ${FLAGS}")
+endmacro()
+
+macro(tomahawk_add_c_flags FLAGS)
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${FLAGS}")
+    set( TOMAHAWK_C_FLAGS "${TOMAHAWK_C_FLAGS} ${FLAGS}")
 endmacro()
 
 # enforce proper symbol exporting on all platforms
@@ -264,16 +274,17 @@ check_cxx_compiler_flag( "-std=c++11" CXX11_FOUND )
 check_cxx_compiler_flag( "-std=c++0x" CXX0X_FOUND )
 check_cxx_compiler_flag( "-stdlib=libc++" LIBCPP_FOUND )
 if(CXX11_FOUND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+    tomahawk_add_cxx_flags( "-std=c++11" )
 elseif(CXX0X_FOUND)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+    tomahawk_add_cxx_flags( "-std=c++0x" )
 else()
     message(STATUS "${CMAKE_CXX_COMPILER} does not support C++11, please use a
     different compiler")
 endif()
 if(LIBCPP_FOUND AND APPLE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    tomahawk_add_cxx_flags( "-stdlib=libc++" )
 endif()
+
 
 macro_optional_find_package(Echonest 2.2.0)
 macro_log_feature(ECHONEST_FOUND "Echonest" "Qt library for communicating with The Echo Nest" "http://projects.kde.org/libechonest" TRUE "" "libechonest 2.2.0 is needed for dynamic playlists and the infosystem")
@@ -289,7 +300,7 @@ if( NOT TOMAHAWK_QT5 )
     macro_log_feature(QJSON_FOUND "QJson" "Qt library that maps JSON data to QVariant objects" "http://qjson.sf.net" TRUE "" "libqjson is used for encoding communication between Tomahawk instances")
 ENDIF()
 
-macro_optional_find_package(Taglib 1.6.0)
+macro_optional_find_package(Taglib 1.8.0)
 macro_log_feature(TAGLIB_FOUND "TagLib" "Audio Meta-Data Library" "http://developer.kde.org/~wheeler/taglib.html" TRUE "" "taglib is needed for reading meta data from audio files")
 include( CheckTagLibFileName )
 check_taglib_filename( COMPLEX_TAGLIB_FILENAME )
@@ -316,7 +327,7 @@ if( TOMAHAWK_QT5 )
 else()
     macro_optional_find_package(LibAttica 0.4.0)
 endif()
-macro_log_feature(LIBATTICA_FOUND "libattica" "Provides support for installation of resolvers from the Tomahawk website" "https://projects.kde.org/projects/kdesupport/attica" TRUE "" "")
+macro_log_feature(LIBATTICA_FOUND "libattica" "Provides support for installation of resolvers from the Tomahawk website" "http://download.kde.org/stable/attica/" TRUE "" "")
 
 macro_optional_find_package(QuaZip)
 macro_log_feature(QuaZip_FOUND "QuaZip" "Provides support for extracting downloaded resolvers automatically." "http://quazip.sourceforge.net/" TRUE "" "")

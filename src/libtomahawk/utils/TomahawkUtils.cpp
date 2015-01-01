@@ -623,6 +623,42 @@ crash()
 }
 
 
+const QString
+operatingSystemVersionDetail()
+{
+#ifdef Q_OS_LINUX
+    return QSettings( "/etc/os-release", QSettings::IniFormat ).value( "PRETTY_NAME", "Linux" ).toString();
+#elif defined ( Q_OS_WIN )
+    QString version( "Windows" );
+    OSVERSIONINFOEX osvi;
+    BOOL bOsVersionInfoEx;
+
+    ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+
+    bOsVersionInfoEx = GetVersionEx((OSVERSIONINFO*) &osvi);
+    if(bOsVersionInfoEx == 0)
+        return version;
+
+    version.append( QString( " %1.%2" ).arg( osvi.dwMajorVersion ).arg( osvi.dwMinorVersion ) );
+
+    return version;
+#else
+    return "Unknown";
+#endif
+}
+
+
+const QString
+userAgentString( const QString& applicationName, const QString& applicationVersion )
+{
+    return QString( "%1/%2 (%3)" )
+    .arg( applicationName )
+    .arg( applicationVersion )
+    .arg( operatingSystemVersionDetail() );
+}
+
+
 void
 installTranslator( QObject* parent )
 {
@@ -948,10 +984,16 @@ urlSetQuery( QUrl& url, const QString& query )
 QByteArray
 percentEncode( const QUrl& url )
 {
+    //NOTE: this function does not exhaustively replace things that QUrl
+    //sometimes misses, however adding those in this function (like in
+    //encodedQuery()) causes some things like toma.hk link generation to
+    //fail, so leave them out here
+
     QByteArray data = url.toEncoded();
 
-    data.replace( "'", "%27" ); // QUrl doesn't encode ', which it doesn't have to. Some apps don't like ' though, and want %27. Both are valid.
-    data.replace( "%20", "+" );
+    // QUrl doesn't encode ', which it doesn't have to. Some apps don't like ' though, and want %27. Both are valid.
+     data.replace( "'", "%27" );
+     data.replace( "%20", "+" );
 
     return data;
 }
@@ -960,11 +1002,19 @@ percentEncode( const QUrl& url )
 QByteArray
 encodedQuery( const QUrl& url )
 {
+    QByteArray data;
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 0, 0 )
-    return url.query(QUrl::FullyEncoded).toUtf8();
+    data = url.query(QUrl::FullyEncoded).toUtf8();
 #else
-    return url.encodedQuery();
+    data = url.encodedQuery();
 #endif
+    // QUrl doesn't encode : or ; which it should, as well as some other things, so be safer here in general.
+    data.replace( "'", "%27" );
+    data.replace( ".", "%2E" );
+    data.replace( "*", "%2A" );
+    data.replace( ":", "%3A" );
+    data.replace( ";", "%3B" );
+    return data;
 }
 
 } // ns

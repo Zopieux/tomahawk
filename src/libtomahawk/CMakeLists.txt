@@ -84,6 +84,8 @@ set( libGuiSources
 
     resolvers/ExternalResolverGui.cpp
     resolvers/ScriptResolver.cpp
+    resolvers/JSInfoPlugin.cpp
+    resolvers/JSInfoSystemHelper.cpp
     resolvers/JSResolver.cpp
     resolvers/JSResolverHelper.cpp
     resolvers/ScriptEngine.cpp
@@ -216,6 +218,8 @@ list(APPEND libSources
 
     audio/AudioEngine.cpp
     audio/AudioOutput.cpp
+    audio/MediaStream.cpp
+    audio/Qnr_IoDeviceStream.cpp
 
     collection/Collection.cpp
     collection/ArtistsRequest.cpp
@@ -348,14 +352,12 @@ list(APPEND libSources
     utils/Json.cpp
     utils/TomahawkUtils.cpp
     utils/Logger.cpp
-    utils/Qnr_IoDeviceStream.cpp
     utils/XspfLoader.cpp
     utils/TomahawkCache.cpp
     utils/GuiHelpers.cpp
     utils/WeakObjectHash.cpp
     utils/WeakObjectList.cpp
     utils/PluginLoader.cpp
-    utils/MediaStream.cpp
 )
 
 add_subdirectory( accounts/configstorage )
@@ -407,9 +409,9 @@ ENDIF(QCA2_FOUND)
 IF(LIBATTICA_FOUND)
     SET( libGuiSources ${libGuiSources} AtticaManager.cpp )
     INCLUDE_DIRECTORIES( ${LIBATTICA_INCLUDE_DIR} )
-    LIST(APPEND LINK_LIBRARIES ${LIBATTICA_LIBRARIES} ${LibAttica_LIBRARIES} ${QuaZip_LIBRARIES} )
+    LIST(APPEND PRIVATE_LINK_LIBRARIES ${LIBATTICA_LIBRARIES} ${LibAttica_LIBRARIES} ${QuaZip_LIBRARIES} )
     IF( TOMAHAWK_QT5 )
-        LIST(APPEND LINK_LIBRARIES KF5::Attica )
+        LIST(APPEND PRIVATE_LINK_LIBRARIES KF5::Attica )
     ENDIF( TOMAHAWK_QT5 )
 ENDIF(LIBATTICA_FOUND)
 
@@ -505,6 +507,7 @@ TARGET_LINK_LIBRARIES( tomahawklib
     # Thirdparty shipped with tomahawk
     ${LIBPORTFWD_LIBRARIES}
     ${QTKEYCHAIN_LIBRARIES}
+    ${PRIVATE_LINK_LIBRARIES}
 
     LINK_PUBLIC
     # External deps

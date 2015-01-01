@@ -53,11 +53,18 @@ GridItemDelegate::GridItemDelegate( QAbstractItemView* parent, PlayableProxyMode
     : QStyledItemDelegate( (QObject*)parent )
     , m_view( parent )
     , m_model( proxy )
+    , m_itemWidth( 0 )
     , m_showPosition( false )
+    , m_wordWrapping( false )
     , m_margin( TomahawkUtils::DpiScaler::scaledY( parent, 32 ) )
 {
     if ( m_view && m_view->metaObject()->indexOfSignal( "modelChanged()" ) > -1 )
         connect( m_view, SIGNAL( modelChanged() ), this, SLOT( modelChanged() ) );
+
+    m_font = m_view->font();
+    m_smallFont = m_font;
+    m_font.setPointSize( TomahawkUtils::defaultFontSize() + 2 );
+    m_smallFont.setPointSize( TomahawkUtils::defaultFontSize() );
 
     connect( this, SIGNAL( updateIndex( QModelIndex ) ), parent, SLOT( update( QModelIndex ) ) );
 
@@ -73,13 +80,28 @@ GridItemDelegate::GridItemDelegate( QAbstractItemView* parent, PlayableProxyMode
 QSize
 GridItemDelegate::sizeHint( const QStyleOptionViewItem& option, const QModelIndex& index ) const
 {
-    if ( m_itemSize.isNull() )
+    if ( m_itemWidth == 0 )
     {
         QSize size = QStyledItemDelegate::sizeHint( option, index );
         return size;
     }
     else
-        return m_itemSize;
+    {
+        const QFontMetrics fm( m_font );
+        const QFontMetrics fms( m_smallFont );
+
+        if ( !m_wordWrapping )
+            return QSize( m_itemWidth, m_itemWidth + fm.height() + m_margin * 0.8 );
+
+        return QSize( m_itemWidth, m_itemWidth + fm.height() + fms.height() + m_margin * 0.8 );
+    }
+}
+
+
+QSize
+GridItemDelegate::itemSize() const
+{
+    return sizeHint( QStyleOptionViewItem(), m_model->index( 0, 0 ) );
 }
 
 
@@ -87,6 +109,13 @@ void
 GridItemDelegate::setShowPosition( bool enabled )
 {
     m_showPosition = enabled;
+}
+
+
+void
+GridItemDelegate::setWordWrapping( bool enabled )
+{
+    m_wordWrapping = enabled;
 }
 
 
@@ -190,18 +219,13 @@ GridItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
     to.setWrapMode( QTextOption::NoWrap );
 
     QString text;
-    QFont font = opt.font;
-    font.setPointSize( TomahawkUtils::defaultFontSize() + 2 );
-    QFont smallFont = font;
-    smallFont.setPointSize( TomahawkUtils::defaultFontSize() );
-
     QRect textRect = option.rect.adjusted( 0, r.height() + m_margin / 4, 0, -m_margin / 2 + m_margin / 8 );
     bool oneLiner = false;
     if ( bottom.isEmpty() )
         oneLiner = true;
 
     painter->setPen( TomahawkStyle::SELECTION_FOREGROUND );
-    painter->setFont( font );
+    painter->setFont( m_font );
     painter->setPen( Qt::black );
     painter->setOpacity( 0.8 );
 
@@ -211,15 +235,15 @@ GridItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
 
         if ( !oneLiner )
         {
-            QFont figFont = font;
+            QFont figFont = m_font;
             figFont.setPixelSize( textRect.height() - m_margin / 8 );
             painter->setFont( figFont );
         }
 
         const QString fig = QString::number( index.row() + 1 );
-        painter->drawText( textRect, fig, QTextOption( Qt::AlignLeft | Qt::AlignTop ) );
+        painter->drawText( textRect, fig, QTextOption( Qt::AlignLeft | Qt::AlignVCenter ) );
 
-        textRect.adjust( painter->fontMetrics().boundingRect( textRect, Qt::AlignLeft | Qt::AlignTop, fig ).width() + m_margin / 4, 0, 0, 0 );
+        textRect.adjust( painter->fontMetrics().boundingRect( textRect, Qt::AlignLeft | Qt::AlignVCenter, fig ).width() + m_margin / 4, 0, 0, 0 );
         painter->restore();
     }
 
@@ -263,7 +287,7 @@ GridItemDelegate::paint( QPainter* painter, const QStyleOptionViewItem& option, 
         painter->restore();
 
         painter->setOpacity( 0.6 );
-        painter->setFont( smallFont );
+        painter->setFont( m_smallFont );
 
         // If the user is hovering over an artist rect, underline the artist name
         if ( m_hoveringOverArtist == index )

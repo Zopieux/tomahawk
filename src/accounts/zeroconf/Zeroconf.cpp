@@ -37,35 +37,19 @@ using namespace Accounts;
 
 ZeroconfPlugin::ZeroconfPlugin ( ZeroconfAccount* parent )
     : SipPlugin( parent )
-    , m_zeroconf( 0 )
+    , m_zeroconf( nullptr )
     , m_state( Account::Disconnected )
     , m_cachedNodes()
 {
-    qDebug() << Q_FUNC_INFO;
     m_advertisementTimer.setInterval( 60000 );
     m_advertisementTimer.setSingleShot( false );
-    connect( &m_advertisementTimer, SIGNAL( timeout() ), this, SLOT( advertise() ) );
+    connect( &m_advertisementTimer, SIGNAL( timeout() ), SLOT( advertise() ) );
 }
 
 
 ZeroconfPlugin::~ZeroconfPlugin()
 {
 }
-
-
-const QString
-ZeroconfPlugin::name() const
-{
-    return QString( MYNAME );
-}
-
-
-const QString
-ZeroconfPlugin::accountName() const
-{
-    return QString( MYNAME );
-}
-
 
 const QString
 ZeroconfPlugin::serviceName() const
@@ -116,16 +100,9 @@ ZeroconfPlugin::disconnectPlugin()
     m_state = Account::Disconnected;
 
     delete m_zeroconf;
-    m_zeroconf = 0;
+    m_zeroconf = nullptr;
 
     setAllPeersOffline();
-}
-
-
-QIcon
-ZeroconfPlugin::icon() const
-{
-    return account()->icon();
 }
 
 

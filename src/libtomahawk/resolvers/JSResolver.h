@@ -27,6 +27,10 @@
 #include "ExternalResolverGui.h"
 #include "Typedefs.h"
 
+namespace Tomahawk
+{
+
+class JSInfoPlugin;
 class JSResolverHelper;
 class JSResolverPrivate;
 class ScriptEngine;
@@ -35,45 +39,63 @@ class DLLEXPORT JSResolver : public Tomahawk::ExternalResolverGui
 {
 Q_OBJECT
 
-friend class ::JSResolverHelper;
+friend class JSResolverHelper;
 
 public:
     explicit JSResolver( const QString& accountId, const QString& scriptPath, const QStringList& additionalScriptPaths = QStringList() );
     virtual ~JSResolver();
     static ExternalResolver* factory( const QString& accountId, const QString& scriptPath, const QStringList& additionalScriptPaths = QStringList() );
 
-    Capabilities capabilities() const Q_DECL_OVERRIDE;
+    Capabilities capabilities() const override;
 
-    QString name() const Q_DECL_OVERRIDE;
-    QPixmap icon() const Q_DECL_OVERRIDE;
-    unsigned int weight() const Q_DECL_OVERRIDE;
-    unsigned int timeout() const Q_DECL_OVERRIDE;
+    QString name() const override;
+    QPixmap icon() const override;
+    unsigned int weight() const override;
+    unsigned int timeout() const override;
 
-    AccountConfigWidget* configUI() const Q_DECL_OVERRIDE;
-    void saveConfig() Q_DECL_OVERRIDE;
+    AccountConfigWidget* configUI() const override;
+    void saveConfig() override;
 
-    ExternalResolver::ErrorState error() const Q_DECL_OVERRIDE;
-    bool running() const Q_DECL_OVERRIDE;
-    void reload() Q_DECL_OVERRIDE;
+    ExternalResolver::ErrorState error() const override;
+    bool running() const override;
+    void reload() override;
 
-    void setIcon( const QPixmap& icon ) Q_DECL_OVERRIDE;
+    void setIcon( const QPixmap& icon ) override;
 
-    bool canParseUrl( const QString& url, UrlType type ) Q_DECL_OVERRIDE;
+    bool canParseUrl( const QString& url, UrlType type ) override;
+
+    /**
+     *  Evaluate JavaScript on the WebKit thread
+     */
+    Q_INVOKABLE void evaluateJavaScript( const QString& scriptSource );
+
+    /**
+     * This method must be called from the WebKit thread
+     */
+    QVariant evaluateJavaScriptWithResult( const QString& scriptSource );
+
+    /**
+     * Escape \ and ' in strings so they are safe to use in JavaScript
+     */
+    static QString escape( const QString& source );
 
 public slots:
-    void resolve( const Tomahawk::query_ptr& query ) Q_DECL_OVERRIDE;
-    void stop() Q_DECL_OVERRIDE;
-    void start() Q_DECL_OVERRIDE;
+    void resolve( const Tomahawk::query_ptr& query ) override;
+    void stop() override;
+    void start() override;
 
     // For ScriptCollection
-    void artists( const Tomahawk::collection_ptr& collection ) Q_DECL_OVERRIDE;
-    void albums( const Tomahawk::collection_ptr& collection, const Tomahawk::artist_ptr& artist ) Q_DECL_OVERRIDE;
-    void tracks( const Tomahawk::collection_ptr& collection, const Tomahawk::album_ptr& album ) Q_DECL_OVERRIDE;
+    void artists( const Tomahawk::collection_ptr& collection ) override;
+    void albums( const Tomahawk::collection_ptr& collection, const Tomahawk::artist_ptr& artist ) override;
+    void tracks( const Tomahawk::collection_ptr& collection, const Tomahawk::album_ptr& album ) override;
     // For UrlLookup
-    void lookupUrl( const QString& url ) Q_DECL_OVERRIDE;
+    void lookupUrl( const QString& url ) override;
 
 signals:
     void stopped();
+
+protected:
+    QVariant callOnResolver( const QString& scriptSource );
 
 private slots:
     void onCollectionIconFetched();
@@ -88,6 +110,13 @@ private:
     void fillDataInWidgets( const QVariantMap& data );
     void onCapabilitiesChanged( Capabilities capabilities );
     void loadCollections();
+    void loadScript( const QString& path );
+    void loadScripts( const QStringList& paths );
+
+    /**
+     * Wrap the pure evaluateJavaScript call in here, while the threadings guards are in public methods
+     */
+    QVariant evaluateJavaScriptInternal( const QString& scriptSource );
 
     // encapsulate javascript calls
     QVariantMap resolverSettings();
@@ -104,4 +133,5 @@ private:
     QScopedPointer<JSResolverPrivate> d_ptr;
 };
 
+} // ns: Tomahawk
 #endif // JSRESOLVER_H

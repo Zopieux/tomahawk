@@ -33,6 +33,7 @@
 #include "AlbumPlaylistInterface.h"
 #include "PlayableItem.h"
 #include "utils/TomahawkUtilsGui.h"
+#include "utils/Closure.h"
 #include "utils/Logger.h"
 
 using namespace Tomahawk;
@@ -207,17 +208,13 @@ TreeModel::addAlbums( const QModelIndex& parent, const QList<Tomahawk::album_ptr
 
 
 void
-TreeModel::addTracks( const album_ptr& album, const QModelIndex& parent, bool autoRefetch )
+TreeModel::addTracks( const album_ptr& album, const QModelIndex& parent )
 {
-    Q_UNUSED( autoRefetch );
-
     startLoading();
 
-    connect( album.data(), SIGNAL( tracksAdded( QList<Tomahawk::query_ptr>, Tomahawk::ModelMode, Tomahawk::collection_ptr ) ),
-                             SLOT( onTracksFound( QList<Tomahawk::query_ptr>, Tomahawk::ModelMode, Tomahawk::collection_ptr ) ) );
-
-    if ( !album->tracks( m_mode, m_collection ).isEmpty() )
-        onTracksAdded( album->tracks( m_mode, m_collection ), parent );
+    onTracksAdded( album->tracks( m_mode, m_collection ), parent );
+    NewClosure( album.data(), SIGNAL( tracksAdded( QList<Tomahawk::query_ptr>, Tomahawk::ModelMode, Tomahawk::collection_ptr ) ),
+                const_cast<TreeModel*>(this), SLOT( addTracks( Tomahawk::album_ptr, QModelIndex ) ), album, parent );
 }
 
 
@@ -305,6 +302,8 @@ TreeModel::onTracksAdded( const QList<Tomahawk::query_ptr>& tracks, const QModel
 
     QPair< int, int > crows;
     int c = rowCount( parent );
+    removeRows( 0, c, parent );
+
     crows.first = c;
     crows.second = c + tracks.count() - 1;
 
@@ -323,21 +322,6 @@ TreeModel::onTracksAdded( const QList<Tomahawk::query_ptr>& tracks, const QModel
 }
 
 
-void
-TreeModel::onTracksFound( const QList<Tomahawk::query_ptr>& tracks, Tomahawk::ModelMode mode, Tomahawk::collection_ptr collection )
-{
-    if ( mode != m_mode || collection != m_collection )
-        return;
-
-    Tomahawk::Album* album = qobject_cast<Tomahawk::Album*>( sender() );
-
-    tDebug() << "Adding album:" << album->artist()->name() << album->name() << album->id();
-    QModelIndex idx = indexFromAlbum( album->weakRef().toStrongRef() );
-    tDebug() << "Adding tracks" << tracks.count() << "to index:" << idx;
-    onTracksAdded( tracks, idx );
-}
-
-
 QModelIndex
 TreeModel::indexFromArtist( const Tomahawk::artist_ptr& artist ) const
 {
@@ -351,7 +335,7 @@ TreeModel::indexFromArtist( const Tomahawk::artist_ptr& artist ) const
         }
     }
 
-    tDebug() << "Could not find item for artist:" << artist->name();
+    tDebug() << Q_FUNC_INFO << "Could not find item for artist:" << artist->name();
     return QModelIndex();
 }
 
@@ -370,7 +354,7 @@ TreeModel::indexFromAlbum( const Tomahawk::album_ptr& album ) const
         }
     }
 
-    tDebug() << "Could not find item for album:" << album->name() << album->artist()->name();
+    tDebug() << Q_FUNC_INFO << "Could not find item for album:" << album->name() << album->artist()->name();
     return QModelIndex();
 }
 
@@ -383,14 +367,14 @@ TreeModel::indexFromResult( const Tomahawk::result_ptr& result ) const
     {
         QModelIndex idx = index( i, 0, albumIdx );
         PlayableItem* item = itemFromIndex( idx );
-        tDebug() << item->result()->toString();
+        // tDebug() << Q_FUNC_INFO << item->result()->toString();
         if ( item && item->result() == result )
         {
             return idx;
         }
     }
 
-    tDebug() << "Could not find item for result:" << result->toString();
+    tDebug() << Q_FUNC_INFO << "Could not find item for result:" << result->toString();
     return QModelIndex();
 }
 
@@ -409,7 +393,7 @@ TreeModel::indexFromQuery( const Tomahawk::query_ptr& query ) const
         }
     }
 
-    tDebug() << "Could not find item for query:" << query->toString();
+    tDebug() << Q_FUNC_INFO << "Could not find item for query:" << query->toString();
     return QModelIndex();
 }
 
@@ -428,6 +412,6 @@ TreeModel::itemFromResult( const Tomahawk::result_ptr& result ) const
         }
     }
 
-    tDebug() << "Could not find item for result:" << result->toString();
+    tDebug() << Q_FUNC_INFO << "Could not find item for result:" << result->toString();
     return 0;
 }

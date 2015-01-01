@@ -24,7 +24,6 @@
 
 #include "DllMacro.h"
 #include "Typedefs.h"
-#include "utils/MediaStream.h"
 
 #include <functional>
 
@@ -32,6 +31,8 @@ struct libvlc_instance_t;
 struct libvlc_media_player_t;
 struct libvlc_media_t;
 struct libvlc_event_t;
+
+class MediaStream;
 
 class DLLEXPORT AudioOutput : public QObject
 {
@@ -66,6 +67,7 @@ public:
     void setDspCallback( std::function< void( int, int, float*, int, int ) > cb );
 
     static AudioOutput* instance();
+    libvlc_instance_t* vlcInstance() const;
 
 public slots:
 
